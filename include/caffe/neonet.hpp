@@ -11,6 +11,7 @@
 #include "caffe/common.hpp"
 #include "caffe/layer.hpp"
 #include "caffe/proto/caffe.pb.h"
+#include "caffe/util/math_functions.hpp"
 
 namespace caffe {
 
@@ -21,16 +22,13 @@ class NeoNet {
   explicit NeoNet(Phase phase);
   virtual ~NeoNet() {}
 
-  void Init();
-  //const vector<Blob<Dtype>*>& ForwardPrefilled(Dtype* loss = NULL);
+  void Init() {
+    phase_ = TRAIN;
+  }
 
-  //Dtype ForwardFromTo(int start, int end);
-  //Dtype ForwardFrom(int start);
-  //Dtype ForwardTo(int end);
-  void ForwardLayer(const string& data) {
+  void ForwardLayer(const string& data, bool reshape_only) {
     LayerParameter layer_param;
     CHECK(layer_param.ParseFromString(data));
-    LOG(INFO) << layer_param.DebugString();
     CHECK(layer_param.has_name());
     const string& layer_name = layer_param.name();
     shared_ptr<Layer<Dtype> > layer;
@@ -38,15 +36,17 @@ class NeoNet {
     if (new_layer) {
       layer = LayerRegistry<Dtype>::CreateLayer(layer_param);;
       LOG(INFO) << "Creating Layer " << layer_name;
+      LOG(INFO) << layer_param.DebugString();
       layers_map_[layer_name] = layer;
     } else {
       layer = layers_map_[layer_name];
       CHECK(layer->is_fresh()) << "Layer with name " << layer_name << " is already used";
+      CHECK(layer->layer_param().type() == layer_param.type()) << "WARNING: layer with name '" << layer_param.name() << "' and different type already exists.";
+      layer->set_fresh(false);
     }
-    layers_.push_back(layer);
+    layer_names_.push_back(layer_name);
     vector<Blob<Dtype>*> bottom_vec;
     vector<Blob<Dtype>*> top_vec;
-    vector<bool> propagate_down;
 
     const vector<string>& bottom_names = bottom_blobs_names_[layer_name];
     bool reset_bottoms = false;
@@ -75,7 +75,6 @@ class NeoNet {
     }
     for (int bottom_id = 0; bottom_id < layer_param.bottom_size(); ++bottom_id) {
       bottom_vec.push_back(bottom_blobs_[layer_name][bottom_id].get());
-      propagate_down.push_back(true);
     }
 
     bool reset_tops = false;
@@ -88,149 +87,163 @@ class NeoNet {
         top_blobs_[blob_name] = blob_pointer;
         reset_tops = true;
       }
-      top_vec.push_back(top_blobs_[blob_name].get());
+      Blob<Dtype>* top_blob = top_blobs_[blob_name].get();
+      top_vec.push_back(top_blob);
+      if (top_blob->DiffInitialized() && !layer->is_loss()) {
+        // Zero out top_diffs, except for loss blobs, which never change
+        caffe_set(top_blob->count(), Dtype(0.), top_blob->mutable_cpu_diff());
+      }
     }
 
     if (new_layer) {
       layer->SetUp(bottom_vec, top_vec);
+      vector<string> param_names;
+      vector<Dtype> param_lr_mults;
+      const int param_size = layer_param.param_size();
+      if (param_size > 0) {
+        // new layer has named params
+        CHECK(param_size == layer->blobs().size());
+        for (int i = 0; i < layer->blobs().size(); ++i) {
+          const string& param_name = layer_param.param(i).name();
+          CHECK(param_name.find(".p") != string::npos) << "named param '" << param_name << "'cannot contain .p";
+          param_names.push_back(param_name);
+          param_lr_mults.push_back(layer_param.param(i).has_lr_mult() ? layer_param.param(i).lr_mult() : Dtype(1.));
+        }
+      } else {
+        for (int i = 0; i < layer->blobs().size(); ++i) {
+          stringstream ss;
+          ss << layer_param.name() << ".p" << i;
+          param_names.push_back(ss.str());
+          param_lr_mults.push_back(Dtype(1.));
+        }
+      }
+      layer->set_param_names(param_names);
+      for (int i = 0; i < layer->blobs().size(); ++i) {
+        const string& param_name = layer->param_names()[i];
+        if (params_.find(param_name) == params_.end()) {
+          params_[param_name] = layer->blobs()[i];
+          shared_ptr<Blob<Dtype> > master_ptr(new Blob<Dtype>(layer->blobs()[i]->shape()));
+          param_masters_[param_name] = master_ptr; 
+          param_lr_mults_[param_name] = param_lr_mults[i];
+        } else {
+          layer->blobs()[i]->ShareData(*params_[param_name]);
+          layer->blobs()[i]->ShareDiff(*params_[param_name]);
+        }
+      }
     } else if (reset_bottoms || reset_tops) {
       layer->Reshape(bottom_vec, top_vec);
     }
-
-      
-
-      //AppendBottom(param, layer_id, bottom_id,
-                   //&available_blobs, &blob_name_to_idx);
+    if (!reshape_only) {
+      layer->set_phase(phase_);
+      layer->Forward(bottom_vec, top_vec);
+    }
   }
-  const vector<Blob<Dtype>*>& Forward(const vector<Blob<Dtype>* > & bottom,
-      Dtype* loss = NULL);
-  //string Forward(const string& input_blob_protos, Dtype* loss = NULL);
 
-  void Backward();
-  //void BackwardFromTo(int start, int end);
-  //void BackwardFrom(int start);
-  //void BackwardTo(int end);
+  void Backward() {
+    for (int layer_id = layer_names_.size() - 1; layer_id >= 0; --layer_id) {
+      const string& layer_name = layer_names_[layer_id];
+      shared_ptr<Layer<Dtype> > layer = layers_map_[layer_name];
+      const LayerParameter& layer_param = layer->layer_param();
+      vector<Blob<Dtype>*> bottom_vec;
+      vector<Blob<Dtype>*> top_vec;
+      for (int top_id = 0; top_id < layer_param.top_size(); ++top_id) {
+        const string& blob_name = layer_param.top(top_id);
+        top_vec.push_back(top_blobs_[blob_name].get());
+      }
+      vector<shared_ptr<Blob<Dtype> > > bottom_blobs = bottom_blobs_[layer_name];
+      vector<bool> propagate_down;
+      for (int bottom_id = 0; bottom_id < bottom_blobs.size(); ++bottom_id) {
+        bottom_vec.push_back(bottom_blobs[bottom_id].get());
+        propagate_down.push_back(true);
+      }
+      layer->Backward(top_vec, propagate_down, bottom_vec);
 
-  //void Reshape();
+      if (layer->overwrites_delta()) {
+        // if layer overwrites delta
+        for (int bottom_id = 0; bottom_id < layer_param.bottom_size(); ++bottom_id) {
+          const string& bottom_name = layer_param.bottom(bottom_id);
+          Dtype* master_ptr = top_blobs_[bottom_name]->mutable_cpu_diff();
+          const Dtype* slave_ptr = bottom_vec[bottom_id]->cpu_diff();
+          // TODO: add ifdef CAFFE_GPU
+          caffe_add(bottom_vec[bottom_id]->count(), master_ptr, slave_ptr, master_ptr);
+        }
+      }
+      for (int i = 0; i < layer->param_names().size(); ++i) {
+        const string& param_name = layer->param_names()[i];
+        // TODO: check for GPU
+        caffe_add(layer->blobs()[i]->count(), layer->blobs()[i]->cpu_diff(),
+            param_masters_[param_name]->cpu_diff(),
+            param_masters_[param_name]->mutable_cpu_diff());
+      }
+    }
+  }
 
   /// @brief Updates the network weights based on the diff values computed.
-  void Update();
+  void Update(Dtype lr, Dtype momentum) {
+    std::set<string> params_set;
+    for (int layer_id = layer_names_.size() - 1; layer_id >= 0; --layer_id) {
+      const string& layer_name = layer_names_[layer_id];
+      const shared_ptr<Layer<Dtype> > layer = layers_map_[layer_name];
+      for (int i = 0; i < layer->param_names().size(); ++i) {
+        const string& param_name = layer->param_names()[i];
+        if (params_set.find(param_name) == params_set.end()) {
+          // parameter is first instance of named param
+          params_set.insert(param_name);
+          // TODO: add GPU support
+          caffe_copy(layer->blobs()[i]->count(), param_masters_[param_name]->cpu_diff(),
+              layer->blobs()[i]->mutable_cpu_diff());
+          layer->blobs()[i]->Update(lr * param_lr_mults_[param_name]);
 
+          caffe_cpu_scale(layer->blobs()[i]->count(), momentum,
+              param_masters_[param_name]->cpu_diff(),
+              param_masters_[param_name]->mutable_cpu_diff());
+          caffe_set(layer->blobs()[i]->count(), Dtype(0.),
+              layer->blobs()[i]->mutable_cpu_diff());
+        }
+      }
+
+      layer->set_fresh(true);
+      layer_names_.pop_back();
+    }
+  }
   //void ShareTrainedLayersWith(const NeoNet* other);
 
   /// @brief returns the layer names
   inline const vector<string>& layer_names() const { return layer_names_; }
-  /// @brief returns the blob names
-  inline const vector<string>& blob_names() const { return blob_names_; }
-  /// @brief returns the layers
-  inline const vector<shared_ptr<Layer<Dtype> > >& layers() const {
-    return layers_;
-  }
   /// @brief returns the phase: TRAIN or TEST
   inline Phase phase() const { return phase_; }
 
-  /// @brief returns the parameters
-  inline const vector<shared_ptr<Blob<Dtype> > >& params() const {
-    return params_;
+  inline void set_phase_test() {
+    phase_ = TEST;
   }
-  const map<string, int>& param_names_index() const {
-    return param_names_index_;
+  inline void set_phase_train() {
+    phase_ = TRAIN;
   }
-  inline const vector<int>& param_owners() const { return param_owners_; }
-  /// @brief Input and output blob numbers
-  inline int num_inputs() const { return net_input_blobs_.size(); }
-  inline int num_outputs() const { return net_output_blobs_.size(); }
-  inline const vector<Blob<Dtype>*>& input_blobs() const {
-    return net_input_blobs_;
+  inline map<string, shared_ptr<Blob<Dtype> > >& blobs() {
+    return top_blobs_;
   }
-  inline const vector<Blob<Dtype>*>& output_blobs() const {
-    return net_output_blobs_;
+  inline map<string, vector<shared_ptr<Blob<Dtype> > > > params_map() {
+    map<string, vector<shared_ptr<Blob<Dtype> > > > params_map;
+    typename map<string, shared_ptr<Layer<Dtype> > >::iterator it;
+    for (it = layers_map_.begin(); it != layers_map_.end(); ++it) {
+      const string& layer_name = it->first;
+      params_map[layer_name] = it->second->blobs();
+    }
+    return params_map;
   }
-  inline const vector<int>& input_blob_indices() const {
-    return net_input_blob_indices_;
-  }
-  inline const vector<int>& output_blob_indices() const {
-    return net_output_blob_indices_;
-  }
-  //bool has_blob(const string& blob_name) const;
-  //const shared_ptr<Blob<Dtype> > blob_by_name(const string& blob_name) const;
-  //bool has_layer(const string& layer_name) const;
-  //const shared_ptr<Layer<Dtype> > layer_by_name(const string& layer_name) const;
-
-  void set_debug_info(const bool value) { debug_info_ = value; }
-
  protected:
-  // Helpers for Init.
-  /// @brief Append a new input or top blob to the net.
-  void AppendTop(const NetParameter& param, const int layer_id,
-                 const int top_id, set<string>* available_blobs,
-                 map<string, int>* blob_name_to_idx);
-  /// @brief Append a new bottom blob to the net.
-  int AppendBottom(const NetParameter& param, const int layer_id,
-                   const int bottom_id, set<string>* available_blobs,
-                   map<string, int>* blob_name_to_idx);
-  /// @brief Append a new parameter blob to the net.
-  void AppendParam(const NetParameter& param, const int layer_id,
-                   const int param_id);
-
-  /// @brief Helper for displaying debug info in Forward about input Blobs.
-  void InputDebugInfo(const int layer_id);
-  /// @brief Helper for displaying debug info in Forward.
-  void ForwardDebugInfo(const int layer_id);
-  /// @brief Helper for displaying debug info in Backward.
-  void BackwardDebugInfo(const int layer_id);
-  /// @brief Helper for displaying debug info in Update.
-  void UpdateDebugInfo(const int param_id);
-
-  /// @brief The network name
-  string name_;
   /// @brief The phase: TRAIN or TEST
   Phase phase_;
   /// @brief Individual layers in the net
   map<string, shared_ptr<Layer<Dtype> > > layers_map_;
-  vector<shared_ptr<Layer<Dtype> > > layers_;
-  vector<string> layer_names_;
-  map<string, int> layer_names_index_;
-  vector<bool> layer_need_backward_;
   /// @brief the blobs storing top results after each layer.
   map<string, shared_ptr<Blob<Dtype> > > top_blobs_;
+  map<string, shared_ptr<Blob<Dtype> > > param_masters_;
+  map<string, shared_ptr<Blob<Dtype> > > params_;
+  map<string, Dtype> param_lr_mults_;
   map<string, vector<shared_ptr<Blob<Dtype> > > > bottom_blobs_;
   map<string, vector<string> > bottom_blobs_names_;
-  vector<string> blob_names_;
-  map<string, int> blob_names_index_;
-  vector<bool> blob_need_backward_;
-  /// bottom_vecs stores the vectors containing the input for each layer.
-  /// They don't actually host the blobs (blobs_ does), so we simply store
-  /// pointers.
-  vector<vector<Blob<Dtype>*> > bottom_vecs_;
-  vector<vector<int> > bottom_id_vecs_;
-  vector<vector<bool> > bottom_need_backward_;
-  /// top_vecs stores the vectors containing the output for each layer
-  vector<vector<Blob<Dtype>*> > top_vecs_;
-  vector<vector<int> > top_id_vecs_;
-  /// Vector of weight in the loss (or objective) function of each net blob,
-  /// indexed by blob_id.
-  vector<Dtype> blob_loss_weights_;
-  vector<vector<int> > param_id_vecs_;
-  vector<int> param_owners_;
-  vector<string> param_display_names_;
-  vector<pair<int, int> > param_layer_indices_;
-  map<string, int> param_names_index_;
-  /// blob indices for the input and the output of the net
-  vector<int> net_input_blob_indices_;
-  vector<int> net_output_blob_indices_;
-  vector<Blob<Dtype>*> net_input_blobs_;
-  vector<Blob<Dtype>*> net_output_blobs_;
-  /// The parameters in the network.
-  vector<shared_ptr<Blob<Dtype> > > params_;
-  /// the learning rate multipliers
-  vector<float> params_lr_;
-  /// the weight decay multipliers
-  vector<float> params_weight_decay_;
-  /// The bytes of memory used by this net
-  size_t memory_used_;
-  /// Whether to compute and display debug info for the net.
-  bool debug_info_;
+  vector<string> layer_names_;
 
   DISABLE_COPY_AND_ASSIGN(NeoNet);
 };

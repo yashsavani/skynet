@@ -31,9 +31,9 @@ NeoNet<Dtype>::NeoNet(Phase phase) {
   Init();
 }
 
-template <typename Dtype>
-void NeoNet<Dtype>::Init() {
-  LOG(INFO) << "Initting";
+//template <typename Dtype>
+//void NeoNet<Dtype>::Init() {
+  //LOG(INFO) << "Initting";
   //// Set phase from the state.
   //phase_ = in_param.state().phase();
   //// Filter layers based on their include/exclude rules and
@@ -247,14 +247,14 @@ void NeoNet<Dtype>::Init() {
   //debug_info_ = param.debug_info();
   //LOG(INFO) << "Network initialization done.";
   //LOG(INFO) << "Memory required for data: " << memory_used_ * sizeof(Dtype);
-}
+//}
 
 // Helper for NeoNet::Init: add a new input or top blob to the net.  (Inputs have
 // layer_id == -1, tops have layer_id >= 0.)
-template <typename Dtype>
-void NeoNet<Dtype>::AppendTop(const NetParameter& param, const int layer_id,
-                           const int top_id, set<string>* available_blobs,
-                           map<string, int>* blob_name_to_idx) {
+//template <typename Dtype>
+//void NeoNet<Dtype>::AppendTop(const NetParameter& param, const int layer_id,
+                           //const int top_id, set<string>* available_blobs,
+                           //map<string, int>* blob_name_to_idx) {
   //shared_ptr<LayerParameter> layer_param((layer_id >= 0) ?
     //(new LayerParameter(param.layer(layer_id))) : NULL);
   //const string& blob_name = layer_param ?
@@ -303,13 +303,13 @@ void NeoNet<Dtype>::AppendTop(const NetParameter& param, const int layer_id,
     //}
   //}
   //if (available_blobs) { available_blobs->insert(blob_name); }
-}
+//}
 
 // Helper for NeoNet::Init: add a new bottom blob to the net.
-template <typename Dtype>
-int NeoNet<Dtype>::AppendBottom(const NetParameter& param, const int layer_id,
-    const int bottom_id, set<string>* available_blobs,
-    map<string, int>* blob_name_to_idx) {
+//template <typename Dtype>
+//int NeoNet<Dtype>::AppendBottom(const NetParameter& param, const int layer_id,
+    //const int bottom_id, set<string>* available_blobs,
+    //map<string, int>* blob_name_to_idx) {
   //const LayerParameter& layer_param = param.layer(layer_id);
   //const string& blob_name = layer_param.bottom(bottom_id);
   //if (available_blobs->find(blob_name) == available_blobs->end()) {
@@ -329,11 +329,11 @@ int NeoNet<Dtype>::AppendBottom(const NetParameter& param, const int layer_id,
                           //propagate_down;
   //bottom_need_backward_[layer_id].push_back(need_backward);
   //return blob_id;
-}
+//}
 
-template <typename Dtype>
-void NeoNet<Dtype>::AppendParam(const NetParameter& param, const int layer_id,
-                             const int param_id) {
+//template <typename Dtype>
+//void NeoNet<Dtype>::AppendParam(const NetParameter& param, const int layer_id,
+                             //const int param_id) {
   //const LayerParameter& layer_param = layers_[layer_id]->layer_param();
   //const int param_size = layer_param.param_size();
   //string param_name =
@@ -385,7 +385,7 @@ void NeoNet<Dtype>::AppendParam(const NetParameter& param, const int layer_id,
     //layers_[layer_id]->blobs()[param_id]->ShareData(
         //*layers_[owner_layer_id]->blobs()[owner_param_id]);
   //}
-}
+//}
 
 //template <typename Dtype>
 //Dtype NeoNet<Dtype>::ForwardFromTo(int start, int end) {
@@ -406,15 +406,15 @@ void NeoNet<Dtype>::AppendParam(const NetParameter& param, const int layer_id,
   //return loss;
 //}
 
-template <typename Dtype>
-const vector<Blob<Dtype>*>& NeoNet<Dtype>::Forward(
-    const vector<Blob<Dtype>*> & bottom, Dtype* loss) {
+//template <typename Dtype>
+//const vector<Blob<Dtype>*>& NeoNet<Dtype>::Forward(
+    //const vector<Blob<Dtype>*> & bottom, Dtype* loss) {
   //// Copy bottom to internal bottom
   //for (int i = 0; i < bottom.size(); ++i) {
     //net_input_blobs_[i]->CopyFrom(*bottom[i]);
   //}
   //return ForwardPrefilled(loss);
-}
+//}
 
 //template <typename Dtype>
 //void NeoNet<Dtype>::BackwardFromTo(int start, int end) {
@@ -429,17 +429,17 @@ const vector<Blob<Dtype>*>& NeoNet<Dtype>::Forward(
   //}
 //}
 
-template <typename Dtype>
-void NeoNet<Dtype>::InputDebugInfo(const int input_id) {
+//template <typename Dtype>
+//void NeoNet<Dtype>::InputDebugInfo(const int input_id) {
   //const Blob<Dtype>& blob = *net_input_blobs_[input_id];
   //const string& blob_name = blob_names_[net_input_blob_indices_[input_id]];
   //const Dtype data_abs_val_mean = blob.asum_data() / blob.count();
   //LOG(INFO) << "    [Forward] "
      //<< "Input " << blob_name << " data: " << data_abs_val_mean;
-}
+//}
 
-template <typename Dtype>
-void NeoNet<Dtype>::ForwardDebugInfo(const int layer_id) {
+//template <typename Dtype>
+//void NeoNet<Dtype>::ForwardDebugInfo(const int layer_id) {
   //for (int top_id = 0; top_id < top_vecs_[layer_id].size(); ++top_id) {
     //const Blob<Dtype>& blob = *top_vecs_[layer_id][top_id];
     //const string& blob_name = blob_names_[top_id_vecs_[layer_id][top_id]];
@@ -458,10 +458,10 @@ void NeoNet<Dtype>::ForwardDebugInfo(const int layer_id) {
        //<< "Layer " << layer_names_[layer_id] << ", param blob " << blob_name
        //<< " data: " << data_abs_val_mean;
   //}
-}
+//}
 
-template <typename Dtype>
-void NeoNet<Dtype>::BackwardDebugInfo(const int layer_id) {
+//template <typename Dtype>
+//void NeoNet<Dtype>::BackwardDebugInfo(const int layer_id) {
   //const vector<Blob<Dtype>*>& bottom_vec = bottom_vecs_[layer_id];
   //for (int bottom_id = 0; bottom_id < bottom_vec.size(); ++bottom_id) {
     //if (!bottom_need_backward_[layer_id][bottom_id]) { continue; }
@@ -481,10 +481,10 @@ void NeoNet<Dtype>::BackwardDebugInfo(const int layer_id) {
         //<< "Layer " << layer_names_[layer_id] << ", param blob " << param_id
         //<< " diff: " << diff_abs_val_mean;
   //}
-}
+//}
 
-template <typename Dtype>
-void NeoNet<Dtype>::UpdateDebugInfo(const int param_id) {
+//template <typename Dtype>
+//void NeoNet<Dtype>::UpdateDebugInfo(const int param_id) {
   //const Blob<Dtype>& blob = *params_[param_id];
   //const int param_owner = param_owners_[param_id];
   //const string& layer_name = layer_names_[param_layer_indices_[param_id].first];
@@ -504,15 +504,15 @@ void NeoNet<Dtype>::UpdateDebugInfo(const int param_id) {
         //<< "param " << param_display_names_[param_owners_[param_id]] << ")"
         //<< " diff: " << diff_abs_val_mean;
   //}
-}
+//}
 
 //template <typename Dtype>
 //void NeoNet<Dtype>::BackwardFrom(int start) {
   //BackwardFromTo(start, 0);
 //}
 
-template <typename Dtype>
-void NeoNet<Dtype>::Backward() {
+//template <typename Dtype>
+//void NeoNet<Dtype>::Backward() {
   //BackwardFromTo(layers_.size() - 1, 0);
   //if (debug_info_) {
     //Dtype asum_data = 0, asum_diff = 0, sumsq_data = 0, sumsq_diff = 0;
@@ -529,7 +529,7 @@ void NeoNet<Dtype>::Backward() {
         //<< "L1 norm = (" << asum_data << ", " << asum_diff << "); "
         //<< "L2 norm = (" << l2norm_data << ", " << l2norm_diff << ")";
   //}
-}
+//}
 
 //template <typename Dtype>
 //void NeoNet<Dtype>::Reshape() {
@@ -538,8 +538,8 @@ void NeoNet<Dtype>::Backward() {
   //}
 //}
 
-template <typename Dtype>
-void NeoNet<Dtype>::Update() {
+//template <typename Dtype>
+//void NeoNet<Dtype>::Update() {
   //// First, accumulate the diffs of any shared parameters into their owner's
   //// diff. (Assumes that the learning rate, weight decay, etc. have already been
   //// accounted for in the current diff.)
@@ -574,7 +574,7 @@ void NeoNet<Dtype>::Update() {
     //if (debug_info_) { UpdateDebugInfo(i); }
     //params_[i]->Update();
   //}
-}
+//}
 
 //template <typename Dtype>
 //bool NeoNet<Dtype>::has_blob(const string& blob_name) const {

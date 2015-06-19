@@ -153,6 +153,13 @@ class Layer {
     return blobs_;
   }
 
+  inline void set_param_names(const vector<string>& param_names) {
+    param_names_ = param_names;
+  }
+  const vector<string>& param_names() const {
+    return param_names_;
+  }
+
   /**
    * @brief Returns the layer parameter.
    */
@@ -182,6 +189,12 @@ class Layer {
 
   inline bool is_fresh() {
     return fresh_;
+  }
+  virtual inline bool is_loss() const {
+    return false;
+  }
+  inline void set_fresh(bool value) {
+    fresh_ = value;
   }
 
   virtual inline bool overwrites_delta() { return true; }
@@ -292,6 +305,10 @@ class Layer {
     param_propagate_down_[param_id] = value;
   }
 
+  inline void set_phase(Phase phase) {
+    phase_ = phase;
+  }
+
 
  protected:
   bool fresh_;
@@ -301,6 +318,7 @@ class Layer {
   Phase phase_;
   /** The vector that stores the learnable parameters as a set of blobs. */
   vector<shared_ptr<Blob<Dtype> > > blobs_;
+  vector<string> param_names_;
   /** Vector indicating whether to compute the diff of each param blob. */
   vector<bool> param_propagate_down_;
 

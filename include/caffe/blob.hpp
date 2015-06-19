@@ -227,6 +227,7 @@ class Blob {
   Dtype* mutable_cpu_diff();
   Dtype* mutable_gpu_diff();
   void Update();
+  void Update(Dtype lr);
   void FromProto(const BlobProto& proto, bool reshape = true);
   void ToProto(BlobProto* proto, bool write_diff = false) const;
 
@@ -264,6 +265,7 @@ class Blob {
   void ShareDiff(const Blob& other);
 
   bool ShapeEquals(const BlobProto& other);
+  bool DiffInitialized() { return diff_ ? true : false; }
 
  protected:
   shared_ptr<SyncedMemory> data_;

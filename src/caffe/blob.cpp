@@ -139,13 +139,20 @@ void Blob<Dtype>::ShareDiff(const Blob& other) {
 template <> void Blob<unsigned int>::Update() { NOT_IMPLEMENTED; }
 template <> void Blob<int>::Update() { NOT_IMPLEMENTED; }
 
+template <> void Blob<unsigned int>::Update(unsigned int lr) { NOT_IMPLEMENTED; }
+template <> void Blob<int>::Update(int lr) { NOT_IMPLEMENTED; }
+
 template <typename Dtype>
 void Blob<Dtype>::Update() {
+  Update(Dtype(1));
+}
+template <typename Dtype>
+void Blob<Dtype>::Update(Dtype lr) {
   // We will perform update based on where the data is located.
   switch (data_->head()) {
   case SyncedMemory::HEAD_AT_CPU:
     // perform computation on CPU
-    caffe_axpy<Dtype>(count_, Dtype(-1),
+    caffe_axpy<Dtype>(count_, Dtype(-lr),
         static_cast<const Dtype*>(diff_->cpu_data()),
         static_cast<Dtype*>(data_->mutable_cpu_data()));
     break;
@@ -153,7 +160,7 @@ void Blob<Dtype>::Update() {
   case SyncedMemory::SYNCED:
 #ifndef CPU_ONLY
     // perform computation on GPU
-    caffe_gpu_axpy<Dtype>(count_, Dtype(-1),
+    caffe_gpu_axpy<Dtype>(count_, Dtype(-lr),
         static_cast<const Dtype*>(diff_->gpu_data()),
         static_cast<Dtype*>(data_->mutable_gpu_data()));
 #else
