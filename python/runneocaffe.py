@@ -19,7 +19,7 @@ def iter(net):
     #print 'euclidean loss: %s' % str(net.blobs['euclidean'].data())
     #print 'conv loss: %s' % str(net.blobs['conv'].diff())
     net.backward()
-    net.update(lr=0.1, momentum=0.0)
+    net.update(lr=0.1, momentum=0.5, clip_gradients=.1)
     #print net.blobs['conv'].data()
     #print net.blobs['conv'].shape()
     print net.layer_params['conv'][0].data()

@@ -91,7 +91,22 @@ class NeoNet {
       top_vec.push_back(top_blob);
       if (top_blob->DiffInitialized() && !layer->is_loss()) {
         // Zero out top_diffs, except for loss blobs, which never change
-        caffe_set(top_blob->count(), Dtype(0.), top_blob->mutable_cpu_diff());
+        switch (Caffe::mode()) {
+        case Caffe::CPU: {
+          caffe_set(top_blob->count(), Dtype(0.), top_blob->mutable_cpu_diff());
+          break;
+        }
+        case Caffe::GPU: {
+#ifndef CPU_ONLY
+          caffe_set(top_blob->count(), Dtype(0.), top_blob->mutable_gpu_diff());
+#else
+          NO_GPU;
+#endif
+          break;
+        }
+        default:
+          LOG(FATAL) << "Unknown caffe mode: " << Caffe::mode();
+        }
       }
     }
 
@@ -169,17 +184,50 @@ class NeoNet {
         // if layer overwrites delta
         for (int bottom_id = 0; bottom_id < layer_param.bottom_size(); ++bottom_id) {
           const string& bottom_name = layer_param.bottom(bottom_id);
-          Dtype* master_ptr = top_blobs_[bottom_name]->mutable_cpu_diff();
-          const Dtype* slave_ptr = bottom_vec[bottom_id]->cpu_diff();
-          // TODO: add ifdef CAFFE_GPU
-          caffe_add(bottom_vec[bottom_id]->count(), master_ptr, slave_ptr, master_ptr);
-        } }
+          switch (Caffe::mode()) {
+          case Caffe::CPU: {
+            Dtype* master_ptr = top_blobs_[bottom_name]->mutable_cpu_diff();
+            const Dtype* slave_ptr = bottom_vec[bottom_id]->cpu_diff();
+            caffe_add(bottom_vec[bottom_id]->count(), master_ptr, slave_ptr, master_ptr);
+            break;
+          }
+          case Caffe::GPU: {
+#ifndef CPU_ONLY
+            Dtype* master_ptr = top_blobs_[bottom_name]->mutable_gpu_diff();
+            const Dtype* slave_ptr = bottom_vec[bottom_id]->gpu_diff();
+            caffe_add(bottom_vec[bottom_id]->count(), master_ptr, slave_ptr, master_ptr);
+#else
+            NO_GPU;
+#endif
+            break;
+          }
+          default:
+            LOG(FATAL) << "Unknown caffe mode: " << Caffe::mode();
+          }
+        }
+      }
       for (int i = 0; i < layer->param_names().size(); ++i) {
         const string& param_name = layer->param_names()[i];
-        // TODO: check for GPU
-        caffe_add(layer->blobs()[i]->count(), layer->blobs()[i]->cpu_diff(),
-            param_masters_[param_name]->cpu_diff(),
-            param_masters_[param_name]->mutable_cpu_diff());
+        switch (Caffe::mode()) {
+        case Caffe::CPU: {
+          caffe_add(layer->blobs()[i]->count(), layer->blobs()[i]->cpu_diff(),
+              param_masters_[param_name]->cpu_diff(),
+              param_masters_[param_name]->mutable_cpu_diff());
+          break;
+        }
+        case Caffe::GPU: {
+#ifndef CPU_ONLY
+          caffe_gpu_add(layer->blobs()[i]->count(), layer->blobs()[i]->gpu_diff(),
+              param_masters_[param_name]->gpu_diff(),
+              param_masters_[param_name]->mutable_gpu_diff());
+#else
+          NO_GPU;
+#endif
+          break;
+        }
+        default:
+          LOG(FATAL) << "Unknown caffe mode: " << Caffe::mode();
+        }
       }
     }
   }
@@ -187,20 +235,22 @@ class NeoNet {
   /// @brief Updates the network weights based on the diff values computed.
   void Update(Dtype lr, Dtype momentum, Dtype clip_gradients) {
     set<string> updated_params;
+    if (clip_gradients > 0) {
+      Dtype diff_l2_norm = DiffL2Norm();
+      if (diff_l2_norm > clip_gradients) {
+        Dtype scale_factor = clip_gradients / diff_l2_norm;
+        lr *= scale_factor;
+        LOG(INFO) << "Scaling down gradients by factor: " << scale_factor;
+      }
+    }
     for (int layer_id = current_layers_vec_.size() - 1; layer_id >= 0; --layer_id) {
       const string& layer_name = current_layers_vec_[layer_id];
-      if (clip_gradients > 0) {
-        Dtype sumsq_diff = GetSumSqDiff();
-        if (sumsq_diff > clip_gradients) {
-          lr *= clip_gradients / sumsq_diff;
-        }
-      }
       UpdateLayer(layer_name, updated_params, lr, momentum);
       current_layers_vec_.pop_back();
     }
   }
 
-  Dtype GetSumSqDiff() {
+  Dtype DiffL2Norm() {
     Dtype sumsq_diff = 0.;
     set<string> squared_params;
     for (int layer_id = current_layers_vec_.size() - 1; layer_id >= 0; --layer_id) {
@@ -214,7 +264,7 @@ class NeoNet {
         }
       }
     }
-    return sumsq_diff;
+    return std::sqrt(sumsq_diff);
   }
 
   void UpdateLayer(const string& layer_name, set<string>& updated_params, Dtype lr, Dtype momentum) {
@@ -224,22 +274,43 @@ class NeoNet {
       if (updated_params.find(param_name) == updated_params.end()) {
         // parameter is first instance of named param
         updated_params.insert(param_name);
-        // TODO: add GPU support
-        caffe_copy(layer->blobs()[i]->count(), param_masters_[param_name]->cpu_diff(),
-            layer->blobs()[i]->mutable_cpu_diff());
-        layer->blobs()[i]->Update(lr * param_lr_mults_[param_name]);
-
-        caffe_cpu_scale(layer->blobs()[i]->count(), momentum,
-            param_masters_[param_name]->cpu_diff(),
-            param_masters_[param_name]->mutable_cpu_diff());
-        caffe_set(layer->blobs()[i]->count(), Dtype(0.),
-            layer->blobs()[i]->mutable_cpu_diff());
+        switch (Caffe::mode()) {
+        case Caffe::CPU: {
+          caffe_copy(layer->blobs()[i]->count(), param_masters_[param_name]->cpu_diff(),
+              layer->blobs()[i]->mutable_cpu_diff());
+          layer->blobs()[i]->Update(lr * param_lr_mults_[param_name]);
+  
+          caffe_cpu_scale(layer->blobs()[i]->count(), momentum,
+              param_masters_[param_name]->cpu_diff(),
+              param_masters_[param_name]->mutable_cpu_diff());
+          caffe_set(layer->blobs()[i]->count(), Dtype(0.),
+              layer->blobs()[i]->mutable_cpu_diff());
+          break;
+        }
+        case Caffe::GPU: {
+#ifndef CPU_ONLY
+          caffe_copy(layer->blobs()[i]->count(), param_masters_[param_name]->gpu_diff(),
+              layer->blobs()[i]->mutable_gpu_diff());
+          layer->blobs()[i]->Update(lr * param_lr_mults_[param_name]);
+  
+          caffe_gpu_scale(layer->blobs()[i]->count(), momentum,
+              param_masters_[param_name]->gpu_diff(),
+              param_masters_[param_name]->mutable_gpu_diff());
+          caffe_set(layer->blobs()[i]->count(), Dtype(0.),
+              layer->blobs()[i]->mutable_gpu_diff());
+#else
+          NO_GPU;
+#endif
+          break;
+        }
+        default:
+          LOG(FATAL) << "Unknown caffe mode: " << Caffe::mode();
+        }
       }
     }
 
     current_layers_set_.erase(layer_name);
   }
-  //void ShareTrainedLayersWith(const NeoNet* other);
 
   /// @brief returns the layer names
   inline const vector<string>& layer_names() const { return current_layers_vec_; }
