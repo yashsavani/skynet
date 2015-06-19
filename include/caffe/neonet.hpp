@@ -40,11 +40,11 @@ class NeoNet {
       layers_map_[layer_name] = layer;
     } else {
       layer = layers_map_[layer_name];
-      CHECK(layer->is_fresh()) << "Layer with name " << layer_name << " is already used";
+      std::pair<set<string>::iterator,bool> ret = current_layers_set_.insert(layer_name);
+      CHECK(ret.second) << "Layer with name " << layer_name << " is already used";
       CHECK(layer->layer_param().type() == layer_param.type()) << "WARNING: layer with name '" << layer_param.name() << "' and different type already exists.";
-      layer->set_fresh(false);
     }
-    layer_names_.push_back(layer_name);
+    current_layers_vec_.push_back(layer_name);
     vector<Blob<Dtype>*> bottom_vec;
     vector<Blob<Dtype>*> top_vec;
 
@@ -102,10 +102,17 @@ class NeoNet {
       const int param_size = layer_param.param_size();
       if (param_size > 0) {
         // new layer has named params
-        CHECK(param_size == layer->blobs().size());
+        CHECK_EQ(param_size, layer->blobs().size()) << "Layer: '" << layer_name << "' declared an incorrect number of params";
         for (int i = 0; i < layer->blobs().size(); ++i) {
-          const string& param_name = layer_param.param(i).name();
-          CHECK(param_name.find(".p") != string::npos) << "named param '" << param_name << "'cannot contain .p";
+          string param_name;
+          if (layer_param.param(i).has_name()) {
+            param_name = layer_param.param(i).name();
+            CHECK(param_name.find(".p") == string::npos) << "named param '" << param_name << "' cannot contain .p";
+          } else {
+            stringstream ss;
+            ss << layer_param.name() << ".p" << i;
+            param_name = ss.str();
+          }
           param_names.push_back(param_name);
           param_lr_mults.push_back(layer_param.param(i).has_lr_mult() ? layer_param.param(i).lr_mult() : Dtype(1.));
         }
@@ -140,8 +147,8 @@ class NeoNet {
   }
 
   void Backward() {
-    for (int layer_id = layer_names_.size() - 1; layer_id >= 0; --layer_id) {
-      const string& layer_name = layer_names_[layer_id];
+    for (int layer_id = current_layers_vec_.size() - 1; layer_id >= 0; --layer_id) {
+      const string& layer_name = current_layers_vec_[layer_id];
       shared_ptr<Layer<Dtype> > layer = layers_map_[layer_name];
       const LayerParameter& layer_param = layer->layer_param();
       vector<Blob<Dtype>*> bottom_vec;
@@ -166,8 +173,7 @@ class NeoNet {
           const Dtype* slave_ptr = bottom_vec[bottom_id]->cpu_diff();
           // TODO: add ifdef CAFFE_GPU
           caffe_add(bottom_vec[bottom_id]->count(), master_ptr, slave_ptr, master_ptr);
-        }
-      }
+        } }
       for (int i = 0; i < layer->param_names().size(); ++i) {
         const string& param_name = layer->param_names()[i];
         // TODO: check for GPU
@@ -179,37 +185,64 @@ class NeoNet {
   }
 
   /// @brief Updates the network weights based on the diff values computed.
-  void Update(Dtype lr, Dtype momentum) {
-    std::set<string> params_set;
-    for (int layer_id = layer_names_.size() - 1; layer_id >= 0; --layer_id) {
-      const string& layer_name = layer_names_[layer_id];
+  void Update(Dtype lr, Dtype momentum, Dtype clip_gradients) {
+    set<string> updated_params;
+    for (int layer_id = current_layers_vec_.size() - 1; layer_id >= 0; --layer_id) {
+      const string& layer_name = current_layers_vec_[layer_id];
+      if (clip_gradients > 0) {
+        Dtype sumsq_diff = GetSumSqDiff();
+        if (sumsq_diff > clip_gradients) {
+          lr *= clip_gradients / sumsq_diff;
+        }
+      }
+      UpdateLayer(layer_name, updated_params, lr, momentum);
+      current_layers_vec_.pop_back();
+    }
+  }
+
+  Dtype GetSumSqDiff() {
+    Dtype sumsq_diff = 0.;
+    set<string> squared_params;
+    for (int layer_id = current_layers_vec_.size() - 1; layer_id >= 0; --layer_id) {
+      const string& layer_name = current_layers_vec_[layer_id];
       const shared_ptr<Layer<Dtype> > layer = layers_map_[layer_name];
       for (int i = 0; i < layer->param_names().size(); ++i) {
         const string& param_name = layer->param_names()[i];
-        if (params_set.find(param_name) == params_set.end()) {
+        if (squared_params.find(param_name) == squared_params.end()) {
           // parameter is first instance of named param
-          params_set.insert(param_name);
-          // TODO: add GPU support
-          caffe_copy(layer->blobs()[i]->count(), param_masters_[param_name]->cpu_diff(),
-              layer->blobs()[i]->mutable_cpu_diff());
-          layer->blobs()[i]->Update(lr * param_lr_mults_[param_name]);
-
-          caffe_cpu_scale(layer->blobs()[i]->count(), momentum,
-              param_masters_[param_name]->cpu_diff(),
-              param_masters_[param_name]->mutable_cpu_diff());
-          caffe_set(layer->blobs()[i]->count(), Dtype(0.),
-              layer->blobs()[i]->mutable_cpu_diff());
+          sumsq_diff += param_masters_[param_name]->sumsq_diff();
         }
       }
-
-      layer->set_fresh(true);
-      layer_names_.pop_back();
     }
+    return sumsq_diff;
+  }
+
+  void UpdateLayer(const string& layer_name, set<string>& updated_params, Dtype lr, Dtype momentum) {
+    const shared_ptr<Layer<Dtype> > layer = layers_map_[layer_name];
+    for (int i = 0; i < layer->param_names().size(); ++i) {
+      const string& param_name = layer->param_names()[i];
+      if (updated_params.find(param_name) == updated_params.end()) {
+        // parameter is first instance of named param
+        updated_params.insert(param_name);
+        // TODO: add GPU support
+        caffe_copy(layer->blobs()[i]->count(), param_masters_[param_name]->cpu_diff(),
+            layer->blobs()[i]->mutable_cpu_diff());
+        layer->blobs()[i]->Update(lr * param_lr_mults_[param_name]);
+
+        caffe_cpu_scale(layer->blobs()[i]->count(), momentum,
+            param_masters_[param_name]->cpu_diff(),
+            param_masters_[param_name]->mutable_cpu_diff());
+        caffe_set(layer->blobs()[i]->count(), Dtype(0.),
+            layer->blobs()[i]->mutable_cpu_diff());
+      }
+    }
+
+    current_layers_set_.erase(layer_name);
   }
   //void ShareTrainedLayersWith(const NeoNet* other);
 
   /// @brief returns the layer names
-  inline const vector<string>& layer_names() const { return layer_names_; }
+  inline const vector<string>& layer_names() const { return current_layers_vec_; }
   /// @brief returns the phase: TRAIN or TEST
   inline Phase phase() const { return phase_; }
 
@@ -219,17 +252,20 @@ class NeoNet {
   inline void set_phase_train() {
     phase_ = TRAIN;
   }
+  inline map<string, shared_ptr<Blob<Dtype> > >& params() {
+    return params_;
+  }
   inline map<string, shared_ptr<Blob<Dtype> > >& blobs() {
     return top_blobs_;
   }
-  inline map<string, vector<shared_ptr<Blob<Dtype> > > > params_map() {
-    map<string, vector<shared_ptr<Blob<Dtype> > > > params_map;
+  inline map<string, vector<string> > layer_params() {
+    map<string, vector<string> > layer_params_map;
     typename map<string, shared_ptr<Layer<Dtype> > >::iterator it;
     for (it = layers_map_.begin(); it != layers_map_.end(); ++it) {
       const string& layer_name = it->first;
-      params_map[layer_name] = it->second->blobs();
+      layer_params_map[layer_name] = it->second->param_names();
     }
-    return params_map;
+    return layer_params_map;
   }
  protected:
   /// @brief The phase: TRAIN or TEST
@@ -243,7 +279,8 @@ class NeoNet {
   map<string, Dtype> param_lr_mults_;
   map<string, vector<shared_ptr<Blob<Dtype> > > > bottom_blobs_;
   map<string, vector<string> > bottom_blobs_names_;
-  vector<string> layer_names_;
+  vector<string> current_layers_vec_;
+  set<string> current_layers_set_;
 
   DISABLE_COPY_AND_ASSIGN(NeoNet);
 };

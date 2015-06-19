@@ -32,8 +32,7 @@ class Layer {
    * layer.
    */
   explicit Layer(const LayerParameter& param)
-    : fresh_(false),
-      layer_param_(param) {
+    : layer_param_(param) {
       // Set phase and copy blobs (if there are any).
       phase_ = param.phase();
       if (layer_param_.blobs_size() > 0) {
@@ -187,16 +186,15 @@ class Layer {
     loss_[top_index] = value;
   }
 
-  inline bool is_fresh() {
-    return fresh_;
-  }
   virtual inline bool is_loss() const {
     return false;
   }
-  inline void set_fresh(bool value) {
-    fresh_ = value;
-  }
 
+  /**
+   * @brief Flag allowing layers that accumulate gradients rather
+   *        than overwriting them to be more memory efficient
+   *        by sharing their bottom_diffs with the layer below.
+   */
   virtual inline bool overwrites_delta() { return true; }
 
   /**
@@ -311,7 +309,6 @@ class Layer {
 
 
  protected:
-  bool fresh_;
   /** The protobuf that stores the layer parameters */
   LayerParameter layer_param_;
   /** The phase: TRAIN or TEST */
