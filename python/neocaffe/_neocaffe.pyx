@@ -8,6 +8,8 @@ from cython.operator cimport postincrement as postincrement
 from cython.operator cimport dereference as dereference
 
 import numpy as pynp
+import h5py
+import os
 
 np.import_array()
 cdef public api tonumpyarray(float* data, long long size) with gil:
@@ -61,9 +63,10 @@ cdef extern from "caffe/neonet.hpp" namespace "caffe":
         void Init()
         void ForwardLayer(string, bool)
         void Backward()
-        void Update(float lr, float momentum)
+        void Update(float lr, float momentum, float clip_gradients)
         map[string, shared_ptr[Blob]]& blobs()
-        map[string, vector[shared_ptr[Blob]]] params_map()
+        map[string, vector[string]] layer_params()
+        map[string, shared_ptr[Blob]] params()
         void set_phase_test()
         void set_phase_train()
 
@@ -100,43 +103,67 @@ cdef class PyBlob(object):
         
 cdef class Net:
     cdef NeoNet* thisptr
+    cdef bool reshape_only
     def __cinit__(self):
         self.thisptr = new NeoNet()
+        self.reshape_only = False
     def __dealloc__(self):
         del self.thisptr
-    def forward_layer(self, layer, reshape_only=False):
-        self.thisptr.ForwardLayer(layer.p.SerializeToString(), reshape_only)
+    def forward_layer(self, layer):
+        self.thisptr.ForwardLayer(layer.p.SerializeToString(), self.reshape_only)
     def backward(self):
         self.thisptr.Backward()
-    def update(self, lr, momentum=0.):
-        self.thisptr.Update(lr, momentum)
+    def update(self, lr, momentum=0., clip_gradients=-1):
+        self.thisptr.Update(lr, momentum, clip_gradients)
     def set_phase_train(self):
         self.thisptr.set_phase_train()
     def set_phase_test(self):
         self.thisptr.set_phase_test()
-    property params:
+    property reshape_only:
         def __get__(self):
-            cdef map[string, vector[shared_ptr[Blob]]] param_map
-            (&param_map)[0] = self.thisptr.params_map()
+            return self.reshape_only
+        def __set__(self, value):
+            self.reshape_only = value
+    property layer_params:
+        def __get__(self):
+            cdef map[string, vector[string]] layer_param_map
+            (&layer_param_map)[0] = self.thisptr.layer_params()
 
-            params = {}
-            cdef map[string, vector[shared_ptr[Blob]]].iterator it = param_map.begin()
-            cdef map[string, vector[shared_ptr[Blob]]].iterator end = param_map.end()
+            params = self.params
+            layer_params = {}
+            cdef map[string, vector[string]].iterator it = layer_param_map.begin()
+            cdef map[string, vector[string]].iterator end = layer_param_map.end()
             cdef string layer_name
-            cdef vector[shared_ptr[Blob]] blob_vec
-            cdef shared_ptr[Blob] blob_ptr
+            cdef vector[string] param_names
             while it != end:
                 layer_name = dereference(it).first
-                blob_vec = dereference(it).second
-                params[layer_name] = []
-                for i in range(blob_vec.size()):
-                    blob_ptr = blob_vec[i]
-                    new_blob = PyBlob()
-                    new_blob.Init(blob_ptr)
-                    params[layer_name].append(new_blob)
+                param_names = dereference(it).second
+                layer_params[layer_name] = []
+                for i in range(param_names.size()):
+                    layer_params[layer_name].append(params[param_names[i]])
                 postincrement(it)
 
-            return params
+            return layer_params
+    property params:
+        def __get__(self):
+            cdef map[string, shared_ptr[Blob]] param_map
+            (&param_map)[0] = self.thisptr.params()
+
+            blobs = {}
+            cdef map[string, shared_ptr[Blob]].iterator it = param_map.begin()
+            cdef map[string, shared_ptr[Blob]].iterator end = param_map.end()
+            cdef string blob_name
+            cdef shared_ptr[Blob] blob_ptr
+            while it != end:
+                blob_name = dereference(it).first
+                blob_ptr = dereference(it).second
+                new_blob = PyBlob()
+                new_blob.Init(blob_ptr)
+                blobs[blob_name] = new_blob
+                postincrement(it)
+
+            return blobs
+
     property blobs:
         def __get__(self):
             cdef map[string, shared_ptr[Blob]] blob_map
@@ -156,28 +183,15 @@ cdef class Net:
                 postincrement(it)
 
             return blobs
+    def save(self, filename):
+        with h5py.File(filename, 'w') as f:
+            for name, value in self.params.items():
+                f[name] = value.data()
 
-
-#cdef NeoNet net
-
-#cdef void foo(NeoNet& net):
-    #net.ForwardLayer(DummyDataLayer().param.SerializeToString(), True)
-    #net.ForwardLayer(ReluLayer().param.SerializeToString(), True)
-    #cdef Blob* b = net.blobs()['image'].get()
-    ##print b.shape()
-    ##cdef map[string, shared_ptr[Blob]] blob_map
-    ##(&blob_map)[0] = net.blobs()
-    ##cdef void set_blob_map(map[string, shared_ptr[Blob]]& blob_map):
-    ##set_blob_map(blob_map)
-
-    ##cdef map[string, shared_ptr[Blob]].iterator it = blob_map.begin()
-    ##cdef map[string, shared_ptr[Blob]].iterator end = blob_map.end()
-    ##while it != end:
-        ##print dereference(it).first
-        ##postincrement(it)
-
-    #result = (tonumpyarray(b.mutable_cpu_data(), b.count()).reshape(b.shape()))
-    #net.Backward()
-
-#for i in range(10):
-    #foo(net)
+    def load(self, filename):
+        with h5py.File(filename, 'r') as f:
+            params = self.params
+            for name, stored_value in f.items():
+                if name in params:
+                    value = params[name].data()
+                    value[:] = stored_value

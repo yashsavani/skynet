@@ -12,16 +12,21 @@ class Layer(object):
         name = kwargs['name']
         bottoms = kwargs.get('bottoms', [])
         tops = kwargs.get('tops', [name])
-        params = kwargs.get('params', [])
-        assert type(tops) != str and type(bottoms) != str and type(params) != str
+        param_names = kwargs.get('param_names', [])
+        param_lr_mults = kwargs.get('param_lr_mults', [])
+        assert type(tops) != str and type(bottoms) != str and type(param_names) != str
         self.p = caffe_pb2.LayerParameter()
         self.p.name = name
         for blob_name in tops:
             self.p.top.append(blob_name)
         for blob_name in bottoms:
             self.p.bottom.append(blob_name)
-        for param_name in params:
-            self.p.param.append(param_name)
+        for i in range(max(len(param_names), len(param_lr_mults))):
+            param = self.p.param.add()
+            if param_names:
+                param.name = param_names[i]
+            if param_lr_mults:
+                param.lr_mult = param_lr_mults[i]
          
 
 class DummyDataLayer(Layer):
