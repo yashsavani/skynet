@@ -162,6 +162,11 @@ class Layer {
   /**
    * @brief Returns the layer parameter.
    */
+  void set_layer_param(const LayerParameter& param) { layer_param_ = param; }
+
+  /**
+   * @brief Returns the layer parameter.
+   */
   const LayerParameter& layer_param() const { return layer_param_; }
 
   /**

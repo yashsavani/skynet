@@ -29,6 +29,7 @@ cdef extern from "caffe/caffe.hpp" namespace "caffe::Caffe":
         CPU = 0
         GPU = 1
     void set_mode(Brew)
+    void set_logging_verbosity(int level)
 
 cdef class Caffe:
     def __cinit__(self):
@@ -42,6 +43,9 @@ cdef class Caffe:
     @staticmethod
     def set_mode_gpu():
         set_mode(GPU)
+    @staticmethod
+    def set_logging_verbosity(level):
+        set_logging_verbosity(level)
 
 cdef extern from "caffe/layer.hpp" namespace "caffe":
     cdef cppclass Layer[float]:
@@ -57,11 +61,11 @@ cdef extern from "caffe/blob.hpp" namespace "caffe":
         float* mutable_cpu_data()
         float* mutable_cpu_diff()
 
+
 cdef extern from "caffe/neonet.hpp" namespace "caffe":
     cdef cppclass NeoNet[float]:
         NeoNet()
-        void Init()
-        void ForwardLayer(string, bool)
+        float ForwardLayer(string layer_param, bool reshape_only, bool new_layer) except +
         void Backward()
         void Update(float lr, float momentum, float clip_gradients)
         map[string, shared_ptr[Blob]]& blobs()
@@ -69,6 +73,7 @@ cdef extern from "caffe/neonet.hpp" namespace "caffe":
         map[string, shared_ptr[Blob]] params()
         void set_phase_test()
         void set_phase_train()
+
 
 cdef extern from "caffe/proto/caffe.pb.h" namespace "caffe":
     cdef cppclass LayerParameter:
@@ -93,12 +98,14 @@ cdef class PyBlob(object):
     def diff(self):
         result = tonumpyarray(self.thisptr.get().mutable_cpu_diff(),
                     self.thisptr.get().count())
-        pynp.reshape(result, self.shape())
+        sh = self.shape()
+        result.shape = sh if len(sh) > 0 else (1,)
         return result
     def data(self):
         result = tonumpyarray(self.thisptr.get().mutable_cpu_data(),
                     self.thisptr.get().count())
-        pynp.reshape(result, self.shape())
+        sh = self.shape()
+        result.shape = sh if len(sh) > 0 else (1,)
         return result
         
 cdef class Net:
@@ -109,8 +116,8 @@ cdef class Net:
         self.reshape_only = False
     def __dealloc__(self):
         del self.thisptr
-    def forward_layer(self, layer):
-        self.thisptr.ForwardLayer(layer.p.SerializeToString(), self.reshape_only)
+    def forward_layer(self, layer, new_layer=False):
+        return self.thisptr.ForwardLayer(layer.p.SerializeToString(), self.reshape_only, new_layer)
     def backward(self):
         self.thisptr.Backward()
     def update(self, lr, momentum=0., clip_gradients=-1):

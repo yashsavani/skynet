@@ -13,26 +13,27 @@
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/util/math_functions.hpp"
 
+#include <stdexcept>
+
 namespace caffe {
 
 template <typename Dtype>
 class NeoNet {
  public:
   explicit NeoNet();
-  explicit NeoNet(Phase phase);
   virtual ~NeoNet() {}
 
   void Init() {
     phase_ = TRAIN;
   }
 
-  void ForwardLayer(const string& data, bool reshape_only) {
+  Dtype ForwardLayer(const string& data, const bool reshape_only, bool new_layer) {
     LayerParameter layer_param;
-    CHECK(layer_param.ParseFromString(data));
-    CHECK(layer_param.has_name());
+    ECHECK(layer_param.ParseFromString(data), "");
+    ECHECK(layer_param.has_name(), "");
     const string& layer_name = layer_param.name();
     shared_ptr<Layer<Dtype> > layer;
-    bool new_layer = layers_map_.find(layer_name) == layers_map_.end();
+    new_layer = new_layer || (layers_map_.find(layer_name) == layers_map_.end());
     if (new_layer) {
       layer = LayerRegistry<Dtype>::CreateLayer(layer_param);;
       LOG(INFO) << "Creating Layer " << layer_name;
@@ -41,19 +42,20 @@ class NeoNet {
     } else {
       layer = layers_map_[layer_name];
       std::pair<set<string>::iterator,bool> ret = current_layers_set_.insert(layer_name);
-      CHECK(ret.second) << "Layer with name " << layer_name << " is already used";
-      CHECK(layer->layer_param().type() == layer_param.type()) << "WARNING: layer with name '" << layer_param.name() << "' and different type already exists.";
+      ECHECK(ret.second, "Layer with name '" << layer_name << "' is already used");
+      ECHECK(layer->layer_param().type() == layer_param.type(), 
+          "WARNING: layer with name '" << layer_param.name() << "' and different type already exists.");
     }
     current_layers_vec_.push_back(layer_name);
     vector<Blob<Dtype>*> bottom_vec;
     vector<Blob<Dtype>*> top_vec;
 
     const vector<string>& bottom_names = bottom_blobs_names_[layer_name];
-    bool reset_bottoms = false;
+    bool reset_bottoms = new_layer || (layer_param.bottom_size() != bottom_names.size());
     for (int bottom_id = 0; bottom_id < layer_param.bottom_size(); ++bottom_id) {
       const string& blob_name = layer_param.bottom(bottom_id);
-      CHECK(top_blobs_.find(blob_name) != top_blobs_.end()) 
-        << "Could not find bottom: '" << blob_name << "' for layer: " << layer_name;
+      ECHECK(top_blobs_.find(blob_name) != top_blobs_.end(), 
+          "Could not find bottom: '" << blob_name << "' for layer: " << layer_name);
       if (bottom_id >= bottom_names.size() || bottom_names[bottom_id] != blob_name) {
         reset_bottoms = true;
         break;
@@ -77,7 +79,7 @@ class NeoNet {
       bottom_vec.push_back(bottom_blobs_[layer_name][bottom_id].get());
     }
 
-    bool reset_tops = false;
+    bool reset_tops = new_layer;
     for (int top_id = 0; top_id < layer_param.top_size(); ++top_id) {
       const string& blob_name = layer_param.top(top_id);
       bool new_top = (top_blobs_.find(blob_name) == top_blobs_.end());
@@ -98,7 +100,7 @@ class NeoNet {
         }
         case Caffe::GPU: {
 #ifndef CPU_ONLY
-          caffe_set(top_blob->count(), Dtype(0.), top_blob->mutable_gpu_diff());
+          caffe_gpu_set(top_blob->count(), Dtype(0.), top_blob->mutable_gpu_diff());
 #else
           NO_GPU;
 #endif
@@ -110,6 +112,7 @@ class NeoNet {
       }
     }
 
+    layer->set_layer_param(layer_param);
     if (new_layer) {
       layer->SetUp(bottom_vec, top_vec);
       vector<string> param_names;
@@ -117,12 +120,12 @@ class NeoNet {
       const int param_size = layer_param.param_size();
       if (param_size > 0) {
         // new layer has named params
-        CHECK_EQ(param_size, layer->blobs().size()) << "Layer: '" << layer_name << "' declared an incorrect number of params";
+        ECHECK(param_size == layer->blobs().size(), "Layer: '" << layer_name << "' declared an incorrect number of params");
         for (int i = 0; i < layer->blobs().size(); ++i) {
           string param_name;
           if (layer_param.param(i).has_name()) {
             param_name = layer_param.param(i).name();
-            CHECK(param_name.find(".p") == string::npos) << "named param '" << param_name << "' cannot contain .p";
+            ECHECK(param_name.find(".p") == string::npos, "named param '" << param_name << "' cannot contain .p");
           } else {
             stringstream ss;
             ss << layer_param.name() << ".p" << i;
@@ -150,15 +153,18 @@ class NeoNet {
         } else {
           layer->blobs()[i]->ShareData(*params_[param_name]);
           layer->blobs()[i]->ShareDiff(*params_[param_name]);
+          param_lr_mults_[param_name] = param_lr_mults[i];
         }
       }
-    } else if (reset_bottoms || reset_tops) {
+    } else if (reset_bottoms || reset_tops || layer_param.force_reshape()) {
       layer->Reshape(bottom_vec, top_vec);
     }
+    Dtype loss = 0;
     if (!reshape_only) {
       layer->set_phase(phase_);
-      layer->Forward(bottom_vec, top_vec);
+      loss = layer->Forward(bottom_vec, top_vec);
     }
+    return loss;
   }
 
   void Backward() {
@@ -184,6 +190,7 @@ class NeoNet {
         // if layer overwrites delta
         for (int bottom_id = 0; bottom_id < layer_param.bottom_size(); ++bottom_id) {
           const string& bottom_name = layer_param.bottom(bottom_id);
+          // add layer's bottom diff buffer to previous layer's top diffs
           switch (Caffe::mode()) {
           case Caffe::CPU: {
             Dtype* master_ptr = top_blobs_[bottom_name]->mutable_cpu_diff();
@@ -195,7 +202,7 @@ class NeoNet {
 #ifndef CPU_ONLY
             Dtype* master_ptr = top_blobs_[bottom_name]->mutable_gpu_diff();
             const Dtype* slave_ptr = bottom_vec[bottom_id]->gpu_diff();
-            caffe_add(bottom_vec[bottom_id]->count(), master_ptr, slave_ptr, master_ptr);
+            caffe_gpu_add(bottom_vec[bottom_id]->count(), master_ptr, slave_ptr, master_ptr);
 #else
             NO_GPU;
 #endif
@@ -208,6 +215,7 @@ class NeoNet {
       }
       for (int i = 0; i < layer->param_names().size(); ++i) {
         const string& param_name = layer->param_names()[i];
+        // add param diff to master diff
         switch (Caffe::mode()) {
         case Caffe::CPU: {
           caffe_add(layer->blobs()[i]->count(), layer->blobs()[i]->cpu_diff(),
@@ -240,7 +248,7 @@ class NeoNet {
       if (diff_l2_norm > clip_gradients) {
         Dtype scale_factor = clip_gradients / diff_l2_norm;
         lr *= scale_factor;
-        LOG(INFO) << "Scaling down gradients by factor: " << scale_factor;
+        //LOG(INFO) << "Scaling down gradients by factor: " << scale_factor;
       }
     }
     for (int layer_id = current_layers_vec_.size() - 1; layer_id >= 0; --layer_id) {
@@ -274,6 +282,7 @@ class NeoNet {
       if (updated_params.find(param_name) == updated_params.end()) {
         // parameter is first instance of named param
         updated_params.insert(param_name);
+        // Copy masters back to param diffs, update the params, and zero out diffs after.
         switch (Caffe::mode()) {
         case Caffe::CPU: {
           caffe_copy(layer->blobs()[i]->count(), param_masters_[param_name]->cpu_diff(),
@@ -296,7 +305,7 @@ class NeoNet {
           caffe_gpu_scale(layer->blobs()[i]->count(), momentum,
               param_masters_[param_name]->gpu_diff(),
               param_masters_[param_name]->mutable_gpu_diff());
-          caffe_set(layer->blobs()[i]->count(), Dtype(0.),
+          caffe_gpu_set(layer->blobs()[i]->count(), Dtype(0.),
               layer->blobs()[i]->mutable_gpu_diff());
 #else
           NO_GPU;

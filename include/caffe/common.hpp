@@ -15,6 +15,7 @@
 #include <string>
 #include <utility>  // pair
 #include <vector>
+#include <stdexcept>
 
 #include "caffe/util/device_alternate.hpp"
 
@@ -149,6 +150,11 @@ class Caffe {
   static void SetDevice(const int device_id);
   // Prints the current GPU status.
   static void DeviceQuery();
+  inline static void set_logging_verbosity(int verbosity) { 
+    const char* argv[] = {"neonet"};
+    google::InitGoogleLogging(argv[0]);
+    google::SetStderrLogging(verbosity);
+  }
 
  protected:
 #ifndef CPU_ONLY
@@ -165,6 +171,40 @@ class Caffe {
   Caffe();
 
   DISABLE_COPY_AND_ASSIGN(Caffe);
+};
+
+#ifdef NDEBUG
+#define ECHECK(condition, stream) if (!(condition)) { throw std::runtime_error(Formatter() << __FILE__ << "(@" << __LINE__ << "): " stream); }
+#else
+#define ECHECK(condition, stream) CHECK(condition) << stream
+#endif
+class Formatter
+{
+public:
+    Formatter() {}
+    ~Formatter() {}
+
+    template <typename Type>
+    Formatter & operator << (const Type & value)
+    {
+        stream_ << value;
+        return *this;
+    }
+
+    std::string str() const         { return stream_.str(); }
+    operator std::string () const   { return stream_.str(); }
+
+    enum ConvertToString 
+    {
+        to_str
+    };
+    std::string operator >> (ConvertToString) { return stream_.str(); }
+
+private:
+    std::stringstream stream_;
+
+    Formatter(const Formatter &);
+    Formatter & operator = (Formatter &);
 };
 
 }  // namespace caffe

@@ -23,14 +23,6 @@ NeoNet<Dtype>::NeoNet() {
   Init();
 }
 
-template <typename Dtype>
-NeoNet<Dtype>::NeoNet(Phase phase) {
-  NetParameter param;
-  //ReadNetParamsFromTextFileOrDie(param_file, &param);
-  param.mutable_state()->set_phase(phase);
-  Init();
-}
-
 //template <typename Dtype>
 //void NeoNet<Dtype>::Init() {
   //LOG(INFO) << "Initting";

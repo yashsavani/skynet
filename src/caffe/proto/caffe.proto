@@ -303,6 +303,7 @@ message LayerParameter {
   // included/excluded.
   repeated NetStateRule include = 8;
   repeated NetStateRule exclude = 9;
+  optional bool force_reshape = 204 [default = false]; // the layer type
 
   // Parameters for data pre-processing.
   optional TransformationParameter transform_param = 100;
@@ -335,6 +336,7 @@ message LayerParameter {
   optional InnerProductParameter inner_product_param = 117;
   optional LogParameter log_param = 134;
   optional LRNParameter lrn_param = 118;
+  optional LstmParameter lstm_param = 201;
   optional MemoryDataParameter memory_data_param = 119;
   optional MVNParameter mvn_param = 120;
   optional PoolingParameter pooling_param = 121;
@@ -351,6 +353,7 @@ message LayerParameter {
   optional TanHParameter tanh_param = 127;
   optional ThresholdParameter threshold_param = 128;
   optional WindowDataParameter window_data_param = 129;
+  optional WordvecParameter wordvec_param = 202;
 }
 
 // Message that stores parameters used to apply transformation
@@ -457,6 +460,20 @@ message ConvolutionParameter {
     CUDNN = 2;
   }
   optional Engine engine = 15 [default = DEFAULT];
+}
+
+message LstmParameter {
+  optional uint32 num_cells = 1;
+  optional FillerParameter input_weight_filler = 2; // The filler for the weight
+  optional FillerParameter input_gate_weight_filler = 3; // The filler for the weight
+  optional FillerParameter forget_gate_weight_filler = 4; // The filler for the weight
+  optional FillerParameter output_gate_weight_filler = 5; // The filler for the weight
+}
+
+message WordvecParameter {
+  optional uint32 dimension = 1;
+  optional uint32 vocab_size = 2;
+  optional FillerParameter weight_filler = 3; // The filler for the weight
 }
 
 message DataParameter {
@@ -829,6 +846,7 @@ message SliceParameter {
   // By default, SliceLayer concatenates blobs along the "channels" axis (1).
   optional int32 axis = 3 [default = 1];
   repeated uint32 slice_point = 2;
+  optional bool fast_wordvec_slice = 4 [default = false];
 
   // DEPRECATED: alias for "axis" -- does not support negative indexing.
   optional uint32 slice_dim = 1 [default = 1];
