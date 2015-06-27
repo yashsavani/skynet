@@ -356,6 +356,12 @@ message LayerParameter {
   optional WordvecParameter wordvec_param = 202;
 }
 
+// Like LayerParameter, but is updated every forward and backward call,
+// rather than only being set upon Layer<Dtype> class construction.
+message RuntimeParameter {
+  optional NumpyDataParameter numpy_data_param = 1;
+}
+
 // Message that stores parameters used to apply transformation
 // to the data layer's data
 message TransformationParameter {
@@ -468,6 +474,11 @@ message LstmParameter {
   optional FillerParameter input_gate_weight_filler = 3; // The filler for the weight
   optional FillerParameter forget_gate_weight_filler = 4; // The filler for the weight
   optional FillerParameter output_gate_weight_filler = 5; // The filler for the weight
+}
+
+message NumpyDataParameter {
+  repeated uint32 shape = 1;
+  repeated float data = 2;
 }
 
 message WordvecParameter {

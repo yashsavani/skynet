@@ -494,6 +494,200 @@ void Blob<Dtype>::ToProto(BlobProto* proto, bool write_diff) const {
   }
 }
 
+template <> void Blob<int>::SetDataValues(int value) {
+  NOT_IMPLEMENTED;
+  return;
+}
+
+template <> void Blob<unsigned int>::SetDataValues(unsigned int value) {
+  NOT_IMPLEMENTED;
+  return;
+}
+
+template <typename Dtype>
+void Blob<Dtype>::SetDataValues(const Dtype value) {
+  switch (Caffe::mode()) {
+  case Caffe::CPU:
+    caffe_set(this->count(), value,
+        this->mutable_cpu_data());
+    break;
+  case Caffe::GPU:
+#ifndef CPU_ONLY
+    caffe_gpu_set(this->count(), value,
+        this->mutable_gpu_data());
+#else
+    NO_GPU;
+#endif
+    break;
+  default:
+    ECHECK(false, "Unknown caffe mode.");
+  }
+}
+
+template <> void Blob<int>::SetDiffValues(int value) {
+  NOT_IMPLEMENTED;
+  return;
+}
+
+template <> void Blob<unsigned int>::SetDiffValues(unsigned int value) {
+  NOT_IMPLEMENTED;
+  return;
+}
+
+template <typename Dtype>
+void Blob<Dtype>::SetDiffValues(const Dtype value) {
+  switch (Caffe::mode()) {
+  case Caffe::CPU:
+    caffe_set(this->count(), value,
+        this->mutable_cpu_diff());
+    break;
+  case Caffe::GPU: 
+#ifndef CPU_ONLY
+    caffe_gpu_set(this->count(), value,
+        this->mutable_gpu_diff());
+#else
+    NO_GPU;
+#endif
+    break;
+  default:
+    ECHECK(false, "Unknown caffe mode.");
+  }
+}
+
+template <> void Blob<int>::ScaleDataValues(int value) {
+  NOT_IMPLEMENTED;
+  return;
+}
+
+template <> void Blob<unsigned int>::ScaleDataValues(unsigned int value) {
+  NOT_IMPLEMENTED;
+  return;
+}
+
+template <typename Dtype>
+void Blob<Dtype>::ScaleDataValues(const Dtype value) {
+  switch (Caffe::mode()) {
+  case Caffe::CPU:
+    caffe_cpu_scale(this->count(), value,
+        this->cpu_diff(),
+        this->mutable_cpu_data());
+    break;
+  case Caffe::GPU:
+#ifndef CPU_ONLY
+    caffe_gpu_scale(this->count(), value,
+        this->gpu_diff(),
+        this->mutable_gpu_data());
+#else
+    NO_GPU;
+#endif
+    break;
+  default:
+    ECHECK(false, "Unknown caffe mode.");
+  }
+}
+
+template <> void Blob<int>::ScaleDiffValues(int value) {
+  NOT_IMPLEMENTED;
+  return;
+}
+
+template <> void Blob<unsigned int>::ScaleDiffValues(unsigned int value) {
+  NOT_IMPLEMENTED;
+  return;
+}
+
+template <typename Dtype>
+void Blob<Dtype>::ScaleDiffValues(const Dtype value) {
+  switch (Caffe::mode()) {
+  case Caffe::CPU:
+    caffe_cpu_scale(this->count(), value,
+        this->cpu_diff(),
+        this->mutable_cpu_diff());
+    break;
+  case Caffe::GPU:
+#ifndef CPU_ONLY
+    caffe_gpu_scale(this->count(), value,
+        this->gpu_diff(),
+        this->mutable_gpu_diff());
+#else
+    NO_GPU;
+#endif
+    break;
+  default:
+    ECHECK(false, "Unknown caffe mode.");
+  }
+}
+
+template <> void Blob<int>::AddDataFrom(const Blob& source) {
+  NOT_IMPLEMENTED;
+  return;
+}
+
+template <> void Blob<unsigned int>::AddDataFrom(const Blob& source) {
+  NOT_IMPLEMENTED;
+  return;
+}
+
+template <typename Dtype>
+void Blob<Dtype>::AddDataFrom(const Blob& source) {
+  if (source.count() != count_ || source.shape() != shape_) {
+    ECHECK(false, "Trying to add blobs of different sizes: " << source.count() << " != " << count_);
+  }
+  switch (Caffe::mode()) {
+  case Caffe::CPU:
+    caffe_add(count_, source.cpu_data(),
+        this->cpu_data(),
+        this->mutable_cpu_data());
+    break;
+  case Caffe::GPU:
+#ifndef CPU_ONLY
+    caffe_gpu_add(count_, source.gpu_data(),
+        this->gpu_data(),
+        this->mutable_gpu_data());
+#else
+    NO_GPU;
+#endif
+    break;
+  default:
+    ECHECK(false, "Unknown caffe mode.");
+  }
+}
+
+template <> void Blob<int>::AddDiffFrom(const Blob& source) {
+  NOT_IMPLEMENTED;
+  return;
+}
+
+template <> void Blob<unsigned int>::AddDiffFrom(const Blob& source) {
+  NOT_IMPLEMENTED;
+  return;
+}
+
+template <typename Dtype>
+void Blob<Dtype>::AddDiffFrom(const Blob& source) {
+  if (source.count() != count_ || source.shape() != shape_) {
+    ECHECK(false, "Trying to add blobs of different sizes: " << source.count() << " != " << count_);
+  }
+  switch (Caffe::mode()) {
+  case Caffe::CPU:
+    caffe_add(count_, source.cpu_diff(),
+        this->cpu_diff(),
+        this->mutable_cpu_diff());
+    break;
+  case Caffe::GPU:
+#ifndef CPU_ONLY
+    caffe_gpu_add(count_, source.gpu_diff(),
+        this->gpu_diff(),
+        this->mutable_gpu_diff());
+#else
+    NO_GPU;
+#endif
+    break;
+  default:
+    ECHECK(false, "Unknown caffe mode.");
+  }
+}
+
 INSTANTIATE_CLASS(Blob);
 template class Blob<int>;
 template class Blob<unsigned int>;

@@ -185,9 +185,14 @@ class Blob {
    * @param reshape if false, require this Blob to be pre-shaped to the shape
    *        of other (and die otherwise); if true, Reshape this Blob to other's
    *        shape if necessary
+   * Deprecated in favor of CopyDataFrom, CopyDiffFrom
    */
   void CopyFrom(const Blob<Dtype>& source, bool copy_diff = false,
-      bool reshape = false);
+      bool reshape = false); 
+
+  void CopyDataFrom(const Blob<Dtype>& source) { CopyFrom(source, false, false); }
+
+  void CopyDiffFrom(const Blob<Dtype>& source) { CopyFrom(source, true, false); }
 
   inline Dtype data_at(const int n, const int c, const int h,
       const int w) const {
@@ -266,8 +271,17 @@ class Blob {
 
   bool ShapeEquals(const BlobProto& other);
   bool DiffInitialized() { return diff_ ? true : false; }
+  enum ComputeMode { UNDEFINED, CPU, GPU };
+  void SetDataValues(const Dtype value);
+  void SetDiffValues(const Dtype value);
+  void ScaleDataValues(const Dtype value);
+  void ScaleDiffValues(const Dtype value);
+  void AddDataFrom(const Blob& source);
+  void AddDiffFrom(const Blob& source);
 
  protected:
+  // TODO: optionally override Caffe::mode() with compute_mode_ when defined
+  ComputeMode compute_mode_;
   shared_ptr<SyncedMemory> data_;
   shared_ptr<SyncedMemory> diff_;
   vector<int> shape_;

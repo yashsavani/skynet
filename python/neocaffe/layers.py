@@ -1,5 +1,7 @@
 import caffe_pb2
+import neocaffe
 from caffe_pb2 import DataParameter
+import numpy as np
 
 
 def add_weight_filler(param, max_value):
@@ -17,6 +19,7 @@ class Layer(object):
         force_reshape = kwargs.get('force_reshape', None)
         assert type(tops) != str and type(bottoms) != str and type(param_names) != str
         self.p = caffe_pb2.LayerParameter()
+        self.r = caffe_pb2.RuntimeParameter()
         self.p.name = name
         for blob_name in tops:
             self.p.top.append(blob_name)
@@ -31,6 +34,16 @@ class Layer(object):
         if force_reshape is not None:
             self.p.force_reshape = True
          
+class NumpyDataLayer(Layer):
+    def __init__(self, data, **kwargs):
+        super(NumpyDataLayer, self).__init__(kwargs)
+        self.p.type = "NumpyData"
+        self.r = neocaffe.make_numpy_data_param(np.array(data, dtype=np.float32))
+        #fast version of the following
+        #for x in shape:
+            #self.r.numpy_data_param.shape.append(x)
+        #for x in data.flatten():
+            #self.r.numpy_data_param.data.append(x)
 
 class DummyDataLayer(Layer):
     def __init__(self, shape, **kwargs):

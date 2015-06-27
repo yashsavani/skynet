@@ -160,6 +160,16 @@ class Layer {
   }
 
   /**
+   * @brief Returns the runtime parameter.
+   */
+  void set_runtime_param(const RuntimeParameter& param) { runtime_param_ = param; }
+
+  /**
+   * @brief Returns the runtime parameter.
+   */
+  const RuntimeParameter& runtime_param() const { return runtime_param_; }
+
+  /**
    * @brief Returns the layer parameter.
    */
   void set_layer_param(const LayerParameter& param) { layer_param_ = param; }
@@ -312,10 +322,19 @@ class Layer {
     phase_ = phase;
   }
 
+  inline void reset_bottoms(const vector<string>& new_bottoms) {
+    layer_param_.clear_bottom();
+    for (int i = 0; i < new_bottoms.size(); ++i) {
+      layer_param_.add_bottom(new_bottoms[i]);
+    }
+  }
+
 
  protected:
   /** The protobuf that stores the layer parameters */
   LayerParameter layer_param_;
+  /** Parameter that is updated on every forward pass */
+  RuntimeParameter runtime_param_;
   /** The phase: TRAIN or TEST */
   Phase phase_;
   /** The vector that stores the learnable parameters as a set of blobs. */

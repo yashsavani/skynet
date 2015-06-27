@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import neocaffe
 import argparse
-from neocaffe.layers import ConvLayer, DropoutLayer, DummyDataLayer, SoftmaxLayer, SoftmaxWithLossLayer, LstmLayer, ConcatLayer, InnerProductLayer, WordvecLayer
+from neocaffe.layers import ConvLayer, DropoutLayer, DummyDataLayer, NumpyDataLayer, SoftmaxLayer, SoftmaxWithLossLayer, LstmLayer, ConcatLayer, InnerProductLayer, WordvecLayer
 import config
 import h5py
 import numpy as np
@@ -9,8 +9,8 @@ import random
 
 def get_data():
     data_source = '/shared/u/nlpcaffe/data/language_model/shuffled_train_indices.txt'
-    with open(data_source, 'r') as f:
-        while True:
+    while True:
+        with open(data_source, 'r') as f:
             for x in f.readlines():
                 yield x.strip().split(' ')
 
@@ -18,7 +18,7 @@ def pad_rnn(sentence_batch):
     max_len = max(len(x) for x in sentence_batch)
     result = []
     for x in sentence_batch:
-        y = [int(z) if int(z) < config.unknown_symbol else config.zero_symbol for z in x ]
+        y = [int(z) if int(z) < config.unknown_symbol else config.unknown_symbol for z in x ]
         result.append(y + [config.zero_symbol] * (max_len - len(x)))
     return result
     
@@ -27,18 +27,20 @@ def get_data_batch(data_iter):
         raw_batch = [next(data_iter) for _ in range(config.batch_size)]
         sentence_batch = np.array(pad_rnn(raw_batch))
         yield sentence_batch
-       
+
+counter = 0
 def iter(net, sentence_batches):
     sentence_batch = next(sentence_batches)
     #print sentence_batch
-    mem_cells = 100
-    length = min(sentence_batch.shape[1], 10)
+    mem_cells = 500
+    length = min(sentence_batch.shape[1], 50)
     #print sentence_batch
     #print length
     init_range = 0.1
 
-    net.forward_layer(DummyDataLayer(name='lstm_seed', shape=[config.batch_size, mem_cells, 1, 1]))
-    net.forward_layer(DummyDataLayer(name='label', tops=['label'], shape=[config.batch_size * length, 1, 1, 1]), new_layer=True)
+    net.forward_layer(NumpyDataLayer(name='lstm_seed', data=np.zeros((config.batch_size, mem_cells, 1, 1))))
+    #net.forward_layer(DummyDataLayer(name='label', tops=['label'], shape=[config.batch_size * length, 1, 1, 1]))
+    net.forward_layer(NumpyDataLayer(name='label', data=np.zeros((config.batch_size * length, 1, 1, 1))))
     #print net.blobs['label'].data().shape
     hidden_concat_bottoms = []
     for step in range(length):
@@ -62,10 +64,9 @@ def iter(net, sentence_batches):
     net.forward_layer(ConcatLayer(name='hidden_concat', concat_dim=0, bottoms=hidden_concat_bottoms))
     net.blobs['label'].data()[:,0,0,0] = sentence_batch[:, :length].T.flatten()
     net.forward_layer(InnerProductLayer(name='ip', bottoms=['hidden_concat'], num_output=config.vocab_size, init_range=init_range))
-    print 'ip_shape: ', net.blobs['ip'].shape()
+    #print 'ip_shape: ', net.blobs['ip'].shape()
     #net.forward_layer(SoftmaxLayer(name='softmax', bottoms=['ip']))
     loss = net.forward_layer(SoftmaxWithLossLayer(name='softmax_loss', ignore_label=config.zero_symbol, bottoms=['ip', 'label']))
-    print 'ip_shape: ', net.blobs['ip'].shape()
     #net.forward_layer(EuclideanLossLayer(name='euclidean', bottoms=['ip', 'label']))
     net.backward()
     net.update(lr=20, momentum=0.0, clip_gradients=.24)
@@ -83,7 +84,25 @@ def main():
     net = neocaffe.Net()
     net.set_phase_train()
     neocaffe.Caffe.set_random_seed(10)
-    neocaffe.Caffe.set_mode_cpu()
+    neocaffe.Caffe.set_mode_gpu()
+    neocaffe.Caffe.set_device(0)
+
+    #import time
+    #shape = [3,256,256]
+    #numpy_layer = NumpyDataLayer(name='numpy', tops=['numpy'], data=np.reshape(np.arange(shape[0] * shape[1] * shape[2]), shape))
+    #net.forward_layer(numpy_layer)
+    #net.backward()
+    #net.update(lr=20)
+    #print net.blobs['numpy'].data().shape
+    #shape = [2,256,256]
+    #numpy_layer = NumpyDataLayer(name='numpy', tops=['numpy'], data=np.reshape(np.arange(shape[0] * shape[1] * shape[2]), shape))
+    #net.forward_layer(numpy_layer)
+    #net.backward()
+    #net.update(lr=20)
+    #print net.blobs['numpy'].data().shape
+    #return
+    #print time.time() - start
+    #print net.blobs['numpy'].data()
 
     net.reshape_only = True
     iter(net, sentence_batches)
@@ -93,7 +112,7 @@ def main():
     for i in range(100000):
         loss = iter(net, sentence_batches)
         error += loss / display_interval
-        if i % display_interval == 0:
+        if i % display_interval == 0 and i > 0:
             print 'Iteration %d: %s' % (i, np.mean(error))
             error = 0
 
