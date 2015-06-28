@@ -78,9 +78,9 @@ cdef extern from "caffe/blob.hpp" namespace "caffe":
         float* mutable_cpu_diff()
 
 
-cdef extern from "caffe/neonet.hpp" namespace "caffe":
-    cdef cppclass NeoNet[float]:
-        NeoNet()
+cdef extern from "caffe/apollonet.hpp" namespace "caffe":
+    cdef cppclass ApolloNet[float]:
+        ApolloNet()
         float ForwardLayer(string layer_param_string, string runtime_param_string) except +
         void Backward()
         void Update(float lr, float momentum, float clip_gradients, float decay_rate)
@@ -143,9 +143,9 @@ cdef class PyBlob(object):
         return result
         
 cdef class Net:
-    cdef NeoNet* thisptr
+    cdef ApolloNet* thisptr
     def __cinit__(self, phase='train'):
-        self.thisptr = new NeoNet()
+        self.thisptr = new ApolloNet()
         if phase == 'train':
             self.thisptr.set_phase_train()
         elif phase == 'test':

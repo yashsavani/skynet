@@ -1,5 +1,5 @@
-#ifndef CAFFE_NEO_NET_HPP_
-#define CAFFE_NEO_NET_HPP_
+#ifndef CAFFE_APOLLO_NET_HPP_
+#define CAFFE_APOLLO_NET_HPP_
 
 #include <map>
 #include <set>
@@ -18,10 +18,10 @@
 namespace caffe {
 
 template <typename Dtype>
-class NeoNet {
+class ApolloNet {
  public:
-  explicit NeoNet();
-  virtual ~NeoNet() {}
+  explicit ApolloNet();
+  virtual ~ApolloNet() {}
 
   void Init() {
     phase_ = TRAIN;
@@ -352,10 +352,10 @@ class NeoNet {
   vector<string> current_layers_vec_;
   set<string> current_layers_set_;
 
-  DISABLE_COPY_AND_ASSIGN(NeoNet);
+  DISABLE_COPY_AND_ASSIGN(ApolloNet);
 };
 
 
 }  // namespace caffe
 
-#endif  // CAFFE_NEO_NET_HPP_
+#endif  // CAFFE_APOLLO_NET_HPP_

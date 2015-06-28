@@ -1,6 +1,6 @@
 import caffe_pb2
 from google.protobuf.text_format import Merge
-from ._neocaffe import Net
+from ._apollo import Net
 import layers
 
 class Architecture(object):

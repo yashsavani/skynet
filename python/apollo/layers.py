@@ -1,5 +1,5 @@
 import caffe_pb2
-import neocaffe
+import apollo
 from caffe_pb2 import DataParameter
 import numpy as np
 
@@ -46,7 +46,7 @@ class NumpyDataLayer(Layer):
     def __init__(self, data, **kwargs):
         super(NumpyDataLayer, self).__init__(kwargs)
         self.p.type = "NumpyData"
-        self.r = neocaffe.make_numpy_data_param(np.array(data, dtype=np.float32))
+        self.r = apollo.make_numpy_data_param(np.array(data, dtype=np.float32))
         #fast version of the following
         #for x in shape:
             #self.r.numpy_data_param.shape.append(x)

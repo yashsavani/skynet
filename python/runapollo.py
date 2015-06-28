@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-import neocaffe
+import apollo
 import argparse
-from neocaffe.layers import ConvLayer, DropoutLayer, DummyDataLayer, NumpyDataLayer, SoftmaxLayer, SoftmaxWithLossLayer, LstmLayer, ConcatLayer, InnerProductLayer, WordvecLayer
+from apollo.layers import ConvLayer, DropoutLayer, DummyDataLayer, NumpyDataLayer, SoftmaxLayer, SoftmaxWithLossLayer, LstmLayer, ConcatLayer, InnerProductLayer, WordvecLayer
 import config
 import h5py
 import numpy as np
@@ -78,14 +78,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--loglevel', default=0)
     args = parser.parse_args()
-    neocaffe.Caffe.set_logging_verbosity(int(args.loglevel)) # turn off logging
+    apollo.Caffe.set_logging_verbosity(int(args.loglevel)) # turn off logging
     sentences = get_data()
     sentence_batches = get_data_batch(sentences)
-    net = neocaffe.Net()
+    net = apollo.Net()
     net.set_phase_train()
-    neocaffe.Caffe.set_random_seed(10)
-    neocaffe.Caffe.set_mode_gpu()
-    neocaffe.Caffe.set_device(0)
+    apollo.Caffe.set_random_seed(10)
+    apollo.Caffe.set_mode_gpu()
+    apollo.Caffe.set_device(0)
 
     #import time
     #shape = [3,256,256]

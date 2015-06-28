@@ -630,5 +630,5 @@ $(DISTRIBUTE_DIR): all py | $(DISTRIBUTE_SUBDIRS)
 
 -include $(DEPS)
 
-neocaffe: all pycaffe
-	makecython++ python/neocaffe/_neocaffe.pyx '' "$(CXXFLAGS) $(PYTHON_LDFLAGS) -lcaffe"
+apollo: all pycaffe
+	makecython++ python/apollo/_apollo.pyx '' "$(CXXFLAGS) $(PYTHON_LDFLAGS) -lcaffe"
