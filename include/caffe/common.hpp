@@ -151,8 +151,12 @@ class Caffe {
   // Prints the current GPU status.
   static void DeviceQuery();
   inline static void set_logging_verbosity(int verbosity) { 
-    const char* argv[] = {"neonet"};
-    google::InitGoogleLogging(argv[0]);
+    static bool called_before = false;
+    if (!called_before) {
+      const char* argv[] = {"neonet"};
+      google::InitGoogleLogging(argv[0]);
+      called_before = true;
+    }
     google::SetStderrLogging(verbosity);
   }
 

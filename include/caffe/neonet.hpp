@@ -27,8 +27,7 @@ class NeoNet {
     phase_ = TRAIN;
   }
 
-  Dtype ForwardLayer(const string& layer_param_string, const string& runtime_param_string,
-                     const bool reshape_only) {
+  Dtype ForwardLayer(const string& layer_param_string, const string& runtime_param_string) {
     LayerParameter current_layer_param;
     RuntimeParameter runtime_param;
     ECHECK(runtime_param.ParseFromString(runtime_param_string), "");
@@ -42,6 +41,7 @@ class NeoNet {
       LOG(INFO) << "Creating Layer " << layer_name;
       LOG(INFO) << current_layer_param.DebugString();
       layers_map_[layer_name] = layer;
+      current_layers_set_.insert(layer_name);
     } else {
       layer = layers_map_[layer_name];
       std::pair<set<string>::iterator,bool> ret = current_layers_set_.insert(layer_name);
@@ -115,11 +115,7 @@ class NeoNet {
     }
     Dtype loss = 0;
     layer->set_phase(phase_);
-    if (reshape_only) {
-      layer->Reshape(bottom_vec, top_vec);
-    } else {
-      loss = layer->Forward(bottom_vec, top_vec);
-    }
+    loss = layer->Forward(bottom_vec, top_vec);
     return loss;
   }
 
@@ -216,41 +212,6 @@ class NeoNet {
     }
   }
 
-  /// @brief Updates the network weights based on the diff values computed.
-  void Update(Dtype lr, Dtype momentum, Dtype clip_gradients) {
-    set<string> updated_params;
-    if (clip_gradients > 0) {
-      Dtype diff_l2_norm = DiffL2Norm();
-      if (diff_l2_norm > clip_gradients) {
-        Dtype scale_factor = clip_gradients / diff_l2_norm;
-        lr *= scale_factor;
-        //LOG(INFO) << "Scaling down gradients by factor: " << scale_factor;
-      }
-    }
-    for (int layer_id = current_layers_vec_.size() - 1; layer_id >= 0; --layer_id) {
-      const string& layer_name = current_layers_vec_[layer_id];
-      UpdateLayer(layer_name, updated_params, lr, momentum);
-      current_layers_vec_.pop_back();
-    }
-  }
-
-  Dtype DiffL2Norm() {
-    Dtype sumsq_diff = 0.;
-    set<string> squared_params;
-    for (int layer_id = current_layers_vec_.size() - 1; layer_id >= 0; --layer_id) {
-      const string& layer_name = current_layers_vec_[layer_id];
-      const shared_ptr<Layer<Dtype> > layer = layers_map_[layer_name];
-      for (int i = 0; i < layer->param_names().size(); ++i) {
-        const string& param_name = layer->param_names()[i];
-        if (squared_params.find(param_name) == squared_params.end()) {
-          // parameter is first instance of named param
-          sumsq_diff += param_masters_[param_name]->sumsq_diff();
-        }
-      }
-    }
-    return std::sqrt(sumsq_diff);
-  }
-
   void UpdateLayer(const string& layer_name, set<string>& updated_params, Dtype lr, Dtype momentum) {
     const shared_ptr<Layer<Dtype> > layer = layers_map_[layer_name];
     for (int i = 0; i < layer->param_names().size(); ++i) {
@@ -271,6 +232,47 @@ class NeoNet {
 
     current_layers_set_.erase(layer_name);
   }
+
+  /// @brief Updates the network weights based on the diff values computed.
+  void Update(Dtype lr, Dtype momentum, Dtype clip_gradients) {
+    set<string> updated_params;
+    if (clip_gradients > 0) {
+      Dtype diff_l2_norm = DiffL2Norm();
+      if (diff_l2_norm > clip_gradients) {
+        Dtype scale_factor = clip_gradients / diff_l2_norm;
+        lr *= scale_factor;
+        //LOG(INFO) << "Scaling down gradients by factor: " << scale_factor;
+      }
+    }
+    for (int layer_id = current_layers_vec_.size() - 1; layer_id >= 0; --layer_id) {
+      const string& layer_name = current_layers_vec_[layer_id];
+      UpdateLayer(layer_name, updated_params, lr, momentum);
+      current_layers_vec_.pop_back();
+    }
+  }
+
+  void ResetForward() {
+    current_layers_vec_.clear();
+    current_layers_set_.clear();
+  }
+
+  Dtype DiffL2Norm() {
+    Dtype sumsq_diff = 0.;
+    set<string> squared_params;
+    for (int layer_id = current_layers_vec_.size() - 1; layer_id >= 0; --layer_id) {
+      const string& layer_name = current_layers_vec_[layer_id];
+      const shared_ptr<Layer<Dtype> > layer = layers_map_[layer_name];
+      for (int i = 0; i < layer->param_names().size(); ++i) {
+        const string& param_name = layer->param_names()[i];
+        if (squared_params.find(param_name) == squared_params.end()) {
+          // parameter is first instance of named param
+          sumsq_diff += param_masters_[param_name]->sumsq_diff();
+        }
+      }
+    }
+    return std::sqrt(sumsq_diff);
+  }
+
   void CopyTrainedLayersFrom(const NetParameter& param) {
     int num_source_layers = param.layer_size();
     for (int i = 0; i < num_source_layers; ++i) {
@@ -278,11 +280,11 @@ class NeoNet {
       const string& source_layer_name = source_layer.name();
 
       if (layers_map_.find(source_layer_name) == layers_map_.end()) {
-        DLOG(INFO) << "Ignoring source layer " << source_layer_name;
+        LOG(INFO) << "Ignoring source layer " << source_layer_name;
         continue;
       }
 
-      DLOG(INFO) << "Copying source layer " << source_layer_name;
+      LOG(INFO) << "Copying source layer " << source_layer_name;
       vector<shared_ptr<Blob<Dtype> > >& target_blobs =
           layers_map_[source_layer_name]->blobs();
         

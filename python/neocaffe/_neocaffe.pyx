@@ -11,6 +11,7 @@ import numpy as pynp
 import h5py
 import os
 import caffe_pb2
+import sys
 
 np.import_array()
 cdef public api tonumpyarray(float* data, long long size) with gil:
@@ -80,15 +81,16 @@ cdef extern from "caffe/blob.hpp" namespace "caffe":
 cdef extern from "caffe/neonet.hpp" namespace "caffe":
     cdef cppclass NeoNet[float]:
         NeoNet()
-        float ForwardLayer(string layer_param_string, string runtime_param_string,
-                           bool reshape_only) except +
+        float ForwardLayer(string layer_param_string, string runtime_param_string) except +
         void Backward()
         void Update(float lr, float momentum, float clip_gradients)
+        void ResetForward()
         map[string, shared_ptr[Blob]]& blobs()
         map[string, shared_ptr[Layer]]& layers()
         map[string, shared_ptr[Blob]]& params()
         void set_phase_test()
         void set_phase_train()
+        void CopyTrainedLayersFrom(string trained_filename)
 
 cdef extern from "caffe/layer_factory.hpp" namespace "caffe::LayerRegistry<float>":
     cdef shared_ptr[Layer] CreateLayer(LayerParameter& param)
@@ -142,27 +144,26 @@ cdef class PyBlob(object):
         
 cdef class Net:
     cdef NeoNet* thisptr
-    cdef bool reshape_only
-    def __cinit__(self):
+    def __cinit__(self, phase='train'):
         self.thisptr = new NeoNet()
-        self.reshape_only = False
+        if phase == 'train':
+            self.thisptr.set_phase_train()
+        elif phase == 'test':
+            self.thisptr.set_phase_test()
+        else:
+            assert False, "phase must be one of ['train', 'test']"
     def __dealloc__(self):
         del self.thisptr
+    def forward(self, arch):
+        return arch.forward(self)
     def forward_layer(self, layer):
-        return self.thisptr.ForwardLayer(layer.p.SerializeToString(), layer.r.SerializeToString(), self.reshape_only)
+        return self.thisptr.ForwardLayer(layer.p.SerializeToString(), layer.r.SerializeToString())
     def backward(self):
         self.thisptr.Backward()
     def update(self, lr, momentum=0., clip_gradients=-1):
         self.thisptr.Update(lr, momentum, clip_gradients)
-    def set_phase_train(self):
-        self.thisptr.set_phase_train()
-    def set_phase_test(self):
-        self.thisptr.set_phase_test()
-    property reshape_only:
-        def __get__(self):
-            return self.reshape_only
-        def __set__(self, value):
-            self.reshape_only = value
+    def reset_forward(self):
+        self.thisptr.ResetForward()
     property layers:
         def __get__(self):
             cdef map[string, shared_ptr[Layer]] layers_map
@@ -221,18 +222,36 @@ cdef class Net:
                 postincrement(it)
 
             return blobs
+
     def save(self, filename):
+        assert filename.endswith('.h5'), "saving only supports h5 files"
         with h5py.File(filename, 'w') as f:
             for name, value in self.params.items():
                 f[name] = value.data()
 
     def load(self, filename):
-        with h5py.File(filename, 'r') as f:
-            params = self.params
-            for name, stored_value in f.items():
-                if name in params:
-                    value = params[name].data()
-                    value[:] = stored_value
+        if len(self.params) == 0:
+            sys.stderr.write('WARNING, loading into empty net.')
+        _, extension = os.path.splitext(filename)
+        if extension == '.h5':
+            with h5py.File(filename, 'r') as f:
+                params = self.params
+                for name, stored_value in f.items():
+                    if name in params:
+                        value = params[name].data()
+                        value[:] = stored_value
+        elif extension == '.caffemodel':
+            self.thisptr.CopyTrainedLayersFrom(filename)
+        else:
+            assert False, "Error, filename is neither h5 nor caffemodel: %s, %s" % (filename, extension)
+    def copy_params_from(self, other):
+        self_params = self.params
+        if len(self_params) == 0:
+            sys.stderr.write('WARNING, copying into empty net.')
+        for name, value in other.params.items():
+            if name in self_params:
+                data = self_params[name].data()
+                data[:] = pynp.copy(value.data())
 
 
 cdef extern from "caffe/proto/caffe.pb.h" namespace "caffe":

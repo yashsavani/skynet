@@ -429,6 +429,7 @@ message ConcatParameter {
 
   // DEPRECATED: alias for "axis" -- does not support negative indexing.
   optional uint32 concat_dim = 1 [default = 1];
+  optional bool fast_lstm_concat = 3 [default = false];
 }
 
 message ContrastiveLossParameter {

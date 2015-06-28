@@ -33,6 +33,14 @@ class Layer(object):
                 param.lr_mult = param_lr_mults[i]
         if force_reshape is not None:
             self.p.force_reshape = True
+
+class UnknownLayer(Layer):
+    def __init__(self, p, r=None):
+        self.p = p
+        if r is None:
+            self.r = caffe_pb2.RuntimeParameter()
+        else:
+            self.r = r
          
 class NumpyDataLayer(Layer):
     def __init__(self, data, **kwargs):
