@@ -83,7 +83,7 @@ cdef extern from "caffe/neonet.hpp" namespace "caffe":
         NeoNet()
         float ForwardLayer(string layer_param_string, string runtime_param_string) except +
         void Backward()
-        void Update(float lr, float momentum, float clip_gradients)
+        void Update(float lr, float momentum, float clip_gradients, float decay_rate)
         void ResetForward()
         map[string, shared_ptr[Blob]]& blobs()
         map[string, shared_ptr[Layer]]& layers()
@@ -160,8 +160,8 @@ cdef class Net:
         return self.thisptr.ForwardLayer(layer.p.SerializeToString(), layer.r.SerializeToString())
     def backward(self):
         self.thisptr.Backward()
-    def update(self, lr, momentum=0., clip_gradients=-1):
-        self.thisptr.Update(lr, momentum, clip_gradients)
+    def update(self, lr, momentum=0., clip_gradients=-1, decay_rate=0.):
+        self.thisptr.Update(lr, momentum, clip_gradients, decay_rate)
     def reset_forward(self):
         self.thisptr.ResetForward()
     property layers:

@@ -688,6 +688,43 @@ void Blob<Dtype>::AddDiffFrom(const Blob& source) {
   }
 }
 
+template <> void Blob<int>::L2Regularize(const int decay_rate, const Blob<int>& source) {
+  NOT_IMPLEMENTED;
+  return;
+}
+
+template <> void Blob<unsigned int>::L2Regularize(const unsigned int decay_rate, const Blob<unsigned int>& source) {
+  NOT_IMPLEMENTED;
+  return;
+}
+
+template <typename Dtype>
+void Blob<Dtype>::L2Regularize(const Dtype decay_rate, const Blob<Dtype>& source) {
+  if (source.count() != count_ || source.shape() != shape_) {
+    ECHECK(false, "Trying to regularize blobs of different sizes: " << source.count() << " != " << count_);
+  }
+  switch (Caffe::mode()) {
+  case Caffe::CPU:
+    caffe_axpy(count_,
+        decay_rate,
+        source.cpu_data(),
+        this->mutable_cpu_diff());
+    break;
+  case Caffe::GPU:
+#ifndef CPU_ONLY
+    caffe_gpu_axpy(count_,
+        decay_rate,
+        source.gpu_data(),
+        this->mutable_gpu_diff());
+#else
+    NO_GPU;
+#endif
+    break;
+  default:
+    ECHECK(false, "Unknown caffe mode.");
+  }
+}
+
 INSTANTIATE_CLASS(Blob);
 template class Blob<int>;
 template class Blob<unsigned int>;

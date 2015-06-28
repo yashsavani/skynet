@@ -278,6 +278,7 @@ class Blob {
   void ScaleDiffValues(const Dtype value);
   void AddDataFrom(const Blob& source);
   void AddDiffFrom(const Blob& source);
+  void L2Regularize(const Dtype decay_rate, const Blob& source);
 
  protected:
   // TODO: optionally override Caffe::mode() with compute_mode_ when defined

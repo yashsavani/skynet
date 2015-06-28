@@ -122,6 +122,7 @@ class NeoNet {
   void AddParamMasters(shared_ptr<Layer<Dtype> > layer) {
     //hook up param names and lr_mults with Net
     vector<string> param_names;
+    vector<Dtype> param_decay_mults;
     vector<Dtype> param_lr_mults;
     const LayerParameter& layer_param = layer->layer_param();
     const int param_size = layer_param.param_size();
@@ -140,13 +141,15 @@ class NeoNet {
           param_name = ss.str();
         }
         param_names.push_back(param_name);
-        param_lr_mults.push_back(layer_param.param(i).has_lr_mult() ? layer_param.param(i).lr_mult() : Dtype(1.));
+        param_decay_mults.push_back(layer_param.param(i).decay_mult());
+        param_lr_mults.push_back(layer_param.param(i).lr_mult());
       }
     } else {
       for (int i = 0; i < layer->blobs().size(); ++i) {
         stringstream ss;
         ss << layer_param.name() << ".p" << i;
         param_names.push_back(ss.str());
+        param_decay_mults.push_back(Dtype(1.));
         param_lr_mults.push_back(Dtype(1.));
       }
     }
@@ -157,12 +160,12 @@ class NeoNet {
         params_[param_name] = layer->blobs()[i];
         shared_ptr<Blob<Dtype> > master_ptr(new Blob<Dtype>(layer->blobs()[i]->shape()));
         param_masters_[param_name] = master_ptr; 
-        param_lr_mults_[param_name] = param_lr_mults[i];
       } else {
         layer->blobs()[i]->ShareData(*params_[param_name]);
         layer->blobs()[i]->ShareDiff(*params_[param_name]);
-        param_lr_mults_[param_name] = param_lr_mults[i];
       }
+      param_decay_mults_[param_name] = param_decay_mults[i];
+      param_lr_mults_[param_name] = param_lr_mults[i];
     }
   }
 
@@ -209,10 +212,12 @@ class NeoNet {
       const string& param_name = layer->param_names()[i];
       // add param diff to master diff
       param_masters_[param_name]->AddDiffFrom(*layer->blobs()[i]);
+      
     }
   }
 
-  void UpdateLayer(const string& layer_name, set<string>& updated_params, Dtype lr, Dtype momentum) {
+  void UpdateLayer(const string& layer_name, set<string>& updated_params,
+                   Dtype lr, Dtype momentum, Dtype decay_rate) {
     const shared_ptr<Layer<Dtype> > layer = layers_map_[layer_name];
     for (int i = 0; i < layer->param_names().size(); ++i) {
       const string& param_name = layer->param_names()[i];
@@ -220,9 +225,10 @@ class NeoNet {
         // parameter is first instance of named param
         updated_params.insert(param_name);
 
-        // Copy masters back to param diffs, update the params, and zero out diffs after.
+        // Regularize, copy masters back to param diffs, update the params, and zero out diffs after.
         shared_ptr<Blob<Dtype> > param_layer = layer->blobs()[i];
         shared_ptr<Blob<Dtype> > param_master = param_masters_[param_name];
+        param_master->L2Regularize(decay_rate * param_decay_mults_[param_name], *param_layer);
         param_layer->CopyDiffFrom(*param_master);
         param_layer->Update(lr * param_lr_mults_[param_name]);
         param_layer->ScaleDiffValues(Dtype(0.));
@@ -234,7 +240,7 @@ class NeoNet {
   }
 
   /// @brief Updates the network weights based on the diff values computed.
-  void Update(Dtype lr, Dtype momentum, Dtype clip_gradients) {
+  void Update(Dtype lr, Dtype momentum, Dtype clip_gradients, Dtype decay_rate) {
     set<string> updated_params;
     if (clip_gradients > 0) {
       Dtype diff_l2_norm = DiffL2Norm();
@@ -246,7 +252,7 @@ class NeoNet {
     }
     for (int layer_id = current_layers_vec_.size() - 1; layer_id >= 0; --layer_id) {
       const string& layer_name = current_layers_vec_[layer_id];
-      UpdateLayer(layer_name, updated_params, lr, momentum);
+      UpdateLayer(layer_name, updated_params, lr, momentum, decay_rate);
       current_layers_vec_.pop_back();
     }
   }
@@ -339,6 +345,7 @@ class NeoNet {
   map<string, shared_ptr<Blob<Dtype> > > top_blobs_;
   map<string, shared_ptr<Blob<Dtype> > > param_masters_;
   map<string, shared_ptr<Blob<Dtype> > > params_;
+  map<string, Dtype> param_decay_mults_;
   map<string, Dtype> param_lr_mults_;
   map<string, vector<shared_ptr<Blob<Dtype> > > > bottom_blobs_;
   map<string, vector<string> > bottom_blob_names_;
