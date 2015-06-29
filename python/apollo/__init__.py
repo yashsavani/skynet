@@ -1,4 +1,4 @@
-from ._apollo import Net, Caffe, make_numpy_data_param
+from ._apollo import Tensor, Net, Caffe, make_numpy_data_param
 import caffe_pb2
 import logging
 from architecture import Architecture

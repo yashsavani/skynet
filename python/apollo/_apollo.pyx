@@ -6,6 +6,7 @@ from libcpp.map cimport map
 from libcpp.map cimport pair
 from cython.operator cimport postincrement as postincrement
 from cython.operator cimport dereference as dereference
+from definitions cimport Tensor as CTensor, Blob as CBlob, Layer as CLayer, shared_ptr, LayerParameter
 
 import numpy as pynp
 import h5py
@@ -19,11 +20,6 @@ cdef public api tonumpyarray(float* data, long long size) with gil:
     cdef np.npy_intp dims = size
     #NOTE: it doesn't take ownership of `data`. You must free `data` yourself
     return np.PyArray_SimpleNewFromData(1, &dims, np.NPY_FLOAT, <void*>data)
-
-cdef extern from "boost/shared_ptr.hpp" namespace "boost":
-    cdef cppclass shared_ptr[T]:
-        T* get()
-        void reset(T*)
 
 cdef extern from "caffe/caffe.hpp" namespace "caffe::Caffe":
     void set_random_seed(unsigned int)
@@ -53,29 +49,6 @@ cdef class Caffe:
     def set_logging_verbosity(level):
         set_logging_verbosity(level)
 
-cdef extern from "caffe/proto/caffe.pb.h" namespace "caffe":
-    cdef cppclass LayerParameter:
-        bool ParseFromString(string& data)
-        bool SerializeToString(string*)
-        string name()
-        string& bottom(int)
-        int bottom_size()
-
-cdef extern from "caffe/layer.hpp" namespace "caffe":
-    cdef cppclass Layer[float]:
-        float Forward(vector[Blob*]& bottom, vector[Blob*]& top)
-        float Backward(vector[Blob*]& top, vector[bool]& propagate_down, vector[Blob*]& bottom)
-        LayerParameter& layer_param()
-        vector[shared_ptr[Blob]] blobs()
-
-cdef extern from "caffe/blob.hpp" namespace "caffe":
-    cdef cppclass Blob[float]:
-        Blob()
-        Blob(vector[int]&)
-        vector[int] shape()
-        int count()
-        float* mutable_cpu_data()
-        float* mutable_cpu_diff()
 
 
 cdef extern from "caffe/apollonet.hpp" namespace "caffe":
@@ -85,21 +58,21 @@ cdef extern from "caffe/apollonet.hpp" namespace "caffe":
         void Backward()
         void Update(float lr, float momentum, float clip_gradients, float decay_rate)
         void ResetForward()
-        map[string, shared_ptr[Blob]]& blobs()
-        map[string, shared_ptr[Layer]]& layers()
-        map[string, shared_ptr[Blob]]& params()
+        map[string, shared_ptr[CBlob]]& blobs()
+        map[string, shared_ptr[CLayer]]& layers()
+        map[string, shared_ptr[CBlob]]& params()
         void set_phase_test()
         void set_phase_train()
         void CopyTrainedLayersFrom(string trained_filename)
 
 cdef extern from "caffe/layer_factory.hpp" namespace "caffe::LayerRegistry<float>":
-    cdef shared_ptr[Layer] CreateLayer(LayerParameter& param)
+    cdef shared_ptr[CLayer] CreateLayer(LayerParameter& param)
 
-cdef class PyLayer(object):
-    cdef shared_ptr[Layer] thisptr
+cdef class Layer(object):
+    cdef shared_ptr[CLayer] thisptr
     def __cinit__(self):
         pass
-    cdef void Init(self, shared_ptr[Layer] other):
+    cdef void Init(self, shared_ptr[CLayer] other):
         self.thisptr = other
     property layer_param:
         def __get__(self):
@@ -111,19 +84,62 @@ cdef class PyLayer(object):
     property params:
         def __get__(self):
             params = []
-            cdef vector[shared_ptr[Blob]] cparams
+            cdef vector[shared_ptr[CBlob]] cparams
             (&cparams)[0] = self.thisptr.get().blobs()
             for i in range(cparams.size()):
-                new_blob = PyBlob()
+                new_blob = Blob()
                 new_blob.Init(cparams[i])
                 params.append(new_blob)
             return params
 
-cdef class PyBlob(object):
-    cdef shared_ptr[Blob] thisptr
+cdef class Tensor:
+    cdef shared_ptr[CTensor] thisptr
+    def __cinit__(self):
+        self.thisptr.reset(new CTensor())
+    cdef void Init(self, shared_ptr[CTensor] other):
+        self.thisptr = other
+    def reshape(self, pytuple):
+        cdef vector[int] shape
+        for x in pytuple:
+            shape.push_back(x)
+        self.thisptr.get().Reshape(shape)
+    def shape(self):
+        return self.thisptr.get().shape()
+    def count(self):
+        return self.thisptr.get().count()
+    def mem(self):
+        result = tonumpyarray(self.thisptr.get().mutable_cpu_mem(),
+                    self.thisptr.get().count())
+        sh = self.shape()
+        result.shape = sh if len(sh) > 0 else (1,)
+        return result
+    cdef AddFrom(Tensor self, Tensor other):
+        self.thisptr.get().AddFrom(other.thisptr.get()[0])
+    cdef MulFrom(Tensor self, Tensor other):
+        self.thisptr.get().MulFrom(other.thisptr.get()[0])
+    cdef CopyFrom(Tensor self, Tensor other):
+        self.thisptr.get().CopyFrom(other.thisptr.get()[0])
+    def __iadd__(self, other):
+        self.AddFrom(other)
+        return self
+    def __imul__(self, other):
+        if type(other) == type(self):
+            self.MulFrom(other)
+        else:
+            self.thisptr.get().scale(other)
+        return self
+    def set_mem(self, other):
+        if type(self) == type(other):
+            self.CopyFrom(other)
+        else:
+            self.thisptr.get().SetValues(other)
+
+
+cdef class Blob(object):
+    cdef shared_ptr[CBlob] thisptr
     def __cinit__(self):
         pass
-    cdef void Init(self, shared_ptr[Blob] other):
+    cdef void Init(self, shared_ptr[CBlob] other):
         self.thisptr = other
     def shape(self):
         return self.thisptr.get().shape()
@@ -166,18 +182,18 @@ cdef class Net:
         self.thisptr.ResetForward()
     property layers:
         def __get__(self):
-            cdef map[string, shared_ptr[Layer]] layers_map
+            cdef map[string, shared_ptr[CLayer]] layers_map
             (&layers_map)[0] = self.thisptr.layers()
 
             layers = {}
-            cdef map[string, shared_ptr[Layer]].iterator it = layers_map.begin()
-            cdef map[string, shared_ptr[Layer]].iterator end = layers_map.end()
+            cdef map[string, shared_ptr[CLayer]].iterator it = layers_map.begin()
+            cdef map[string, shared_ptr[CLayer]].iterator end = layers_map.end()
             cdef string layer_name
-            cdef shared_ptr[Layer] layer
+            cdef shared_ptr[CLayer] layer
             while it != end:
                 layer_name = dereference(it).first
                 layer = dereference(it).second
-                py_layer = PyLayer()
+                py_layer = Layer()
                 py_layer.Init(layer)
                 layers[layer_name] = py_layer
                 postincrement(it)
@@ -185,18 +201,18 @@ cdef class Net:
             return layers
     property params:
         def __get__(self):
-            cdef map[string, shared_ptr[Blob]] param_map
+            cdef map[string, shared_ptr[CBlob]] param_map
             (&param_map)[0] = self.thisptr.params()
 
             blobs = {}
-            cdef map[string, shared_ptr[Blob]].iterator it = param_map.begin()
-            cdef map[string, shared_ptr[Blob]].iterator end = param_map.end()
+            cdef map[string, shared_ptr[CBlob]].iterator it = param_map.begin()
+            cdef map[string, shared_ptr[CBlob]].iterator end = param_map.end()
             cdef string blob_name
-            cdef shared_ptr[Blob] blob_ptr
+            cdef shared_ptr[CBlob] blob_ptr
             while it != end:
                 blob_name = dereference(it).first
                 blob_ptr = dereference(it).second
-                new_blob = PyBlob()
+                new_blob = Blob()
                 new_blob.Init(blob_ptr)
                 blobs[blob_name] = new_blob
                 postincrement(it)
@@ -205,18 +221,18 @@ cdef class Net:
 
     property blobs:
         def __get__(self):
-            cdef map[string, shared_ptr[Blob]] blob_map
+            cdef map[string, shared_ptr[CBlob]] blob_map
             (&blob_map)[0] = self.thisptr.blobs()
 
             blobs = {}
-            cdef map[string, shared_ptr[Blob]].iterator it = blob_map.begin()
-            cdef map[string, shared_ptr[Blob]].iterator end = blob_map.end()
+            cdef map[string, shared_ptr[CBlob]].iterator it = blob_map.begin()
+            cdef map[string, shared_ptr[CBlob]].iterator end = blob_map.end()
             cdef string blob_name
-            cdef shared_ptr[Blob] blob_ptr
+            cdef shared_ptr[CBlob] blob_ptr
             while it != end:
                 blob_name = dereference(it).first
                 blob_ptr = dereference(it).second
-                new_blob = PyBlob()
+                new_blob = Blob()
                 new_blob.Init(blob_ptr)
                 blobs[blob_name] = new_blob
                 postincrement(it)
