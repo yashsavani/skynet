@@ -231,8 +231,8 @@ class ApolloNet {
         param_master->L2Regularize(decay_rate * param_decay_mults_[param_name], *param_layer);
         param_layer->CopyDiffFrom(*param_master);
         param_layer->Update(lr * param_lr_mults_[param_name]);
-        param_layer->ScaleDiffValues(Dtype(0.));
-        param_master->ScaleDiffValues(momentum);
+        param_layer->scale_diff(Dtype(0.));
+        param_master->scale_diff(momentum);
       }
     }
 

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "caffe/common.hpp"
+#include "caffe/tensor.hpp"
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/syncedmem.hpp"
 #include "caffe/util/math_functions.hpp"
@@ -24,13 +25,14 @@ namespace caffe {
 template <typename Dtype>
 class Blob {
  public:
-  Blob()
-       : data_(), diff_(), count_(0), capacity_(0) {}
+  Blob() { Init(); }
 
   /// @brief Deprecated; use <code>Blob(const vector<int>& shape)</code>.
   explicit Blob(const int num, const int channels, const int height,
       const int width);
   explicit Blob(const vector<int>& shape);
+
+  void Init();
 
   /// @brief Deprecated; use <code>Reshape(const vector<int>& shape)</code>.
   void Reshape(const int num, const int channels, const int height,
@@ -53,14 +55,13 @@ class Blob {
   void Reshape(const BlobShape& shape);
   void ReshapeLike(const Blob& other);
   inline string shape_string() const {
-    ostringstream stream;
-    for (int i = 0; i < shape_.size(); ++i) {
-      stream << shape_[i] << " ";
-    }
-    stream << "(" << count_ << ")";
-    return stream.str();
+    ECHECK(data_->shape() == diff_->shape(), "FATAL WARNING: data and diff counts do not match.");
+    return data_->shape_string();
   }
-  inline const vector<int>& shape() const { return shape_; }
+  inline const vector<int>& shape() const {
+    ECHECK(data_->shape() == diff_->shape(), "");
+    return data_->shape();
+  }
   /**
    * @brief Returns the dimension of the index-th axis (or the negative index-th
    *        axis from the end, if index is negative).
@@ -70,10 +71,13 @@ class Blob {
    *        Dies on out of range index.
    */
   inline int shape(int index) const {
-    return shape_[CanonicalAxisIndex(index)];
+    return shape()[CanonicalAxisIndex(index)];
   }
-  inline int num_axes() const { return shape_.size(); }
-  inline int count() const { return count_; }
+  inline int num_axes() const { return shape().size(); }
+  inline int count() const {
+    ECHECK(data_->count() == diff_->count(), "FATAL WARNING: data and diff counts do not match.");
+    return data_->count();
+  }
 
   /**
    * @brief Compute the volume of a slice; i.e., the product of dimensions
@@ -212,16 +216,6 @@ class Blob {
     return cpu_diff()[offset(index)];
   }
 
-  inline const shared_ptr<SyncedMemory>& data() const {
-    CHECK(data_);
-    return data_;
-  }
-
-  inline const shared_ptr<SyncedMemory>& diff() const {
-    CHECK(diff_);
-    return diff_;
-  }
-
   const Dtype* cpu_data() const;
   void set_cpu_data(Dtype* data);
   const Dtype* gpu_data() const;
@@ -270,24 +264,28 @@ class Blob {
   void ShareDiff(const Blob& other);
 
   bool ShapeEquals(const BlobProto& other);
-  bool DiffInitialized() { return diff_ ? true : false; }
+  bool DiffInitialized() { return diff_->Initialized(); }
   enum ComputeMode { UNDEFINED, CPU, GPU };
   void SetDataValues(const Dtype value);
   void SetDiffValues(const Dtype value);
-  void ScaleDataValues(const Dtype value);
-  void ScaleDiffValues(const Dtype value);
   void AddDataFrom(const Blob& source);
   void AddDiffFrom(const Blob& source);
   void L2Regularize(const Dtype decay_rate, const Blob& source);
 
  protected:
-  // TODO: optionally override Caffe::mode() with compute_mode_ when defined
+  inline const shared_ptr<Tensor<Dtype> >& data() const {
+    CHECK(data_);
+    return data_;
+  }
+
+  inline const shared_ptr<Tensor<Dtype> >& diff() const {
+    CHECK(diff_);
+    return diff_;
+  }
+
   ComputeMode compute_mode_;
-  shared_ptr<SyncedMemory> data_;
-  shared_ptr<SyncedMemory> diff_;
-  vector<int> shape_;
-  int count_;
-  int capacity_;
+  shared_ptr<Tensor<Dtype> > data_;
+  shared_ptr<Tensor<Dtype> > diff_;
 
   DISABLE_COPY_AND_ASSIGN(Blob);
 };  // class Blob
