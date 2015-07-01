@@ -83,12 +83,10 @@ void LstmLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   Dtype* next_hidden_state = top[0]->mutable_gpu_data();
   Dtype* next_memory_state = top[1]->mutable_gpu_data();
 
-  Dtype* gates_data = gates_data_buffer_.mutable_gpu_data();
-
-  Dtype* input_gates = gates_data + channels_ * num_ * 0;
-  Dtype* forget_gates = gates_data + channels_ * num_ * 1;
-  Dtype* output_gates = gates_data + channels_ * num_ * 2;
-  Dtype* input_values = gates_data + channels_ * num_ * 3;
+  Dtype* input_gates = input_gates_data_buffer_->mutable_gpu_data();
+  Dtype* forget_gates = forget_gates_data_buffer_->mutable_gpu_data();
+  Dtype* output_gates = output_gates_data_buffer_->mutable_gpu_data();
+  Dtype* input_values = input_values_data_buffer_->mutable_gpu_data();
 
   caffe_gpu_gemm<Dtype>(CblasNoTrans, CblasTrans, M_, N_, K_,
     (Dtype)1., input_data, input_weight,
@@ -138,13 +136,12 @@ void LstmLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
   const Dtype* forget_gate_weight = this->blobs_[2]->gpu_data();
   const Dtype* output_gate_weight = this->blobs_[3]->gpu_data();
 
-  const Dtype* gates_data = gates_data_buffer_.mutable_gpu_data();
-  Dtype* gates_diff = gates_diff_buffer_.mutable_gpu_data();
+  const Dtype* input_gates = input_gates_data_buffer_->gpu_data();
+  const Dtype* forget_gates = forget_gates_data_buffer_->gpu_data();
+  const Dtype* output_gates = output_gates_data_buffer_->gpu_data();
+  const Dtype* input_values = input_values_data_buffer_->gpu_data();
 
-  const Dtype* input_gates = gates_data + channels_ * num_ * 0;
-  const Dtype* forget_gates = gates_data + channels_ * num_ * 1;
-  const Dtype* output_gates = gates_data + channels_ * num_ * 2;
-  const Dtype* input_values = gates_data + channels_ * num_ * 3;
+  Dtype* gates_diff = gates_diff_buffer_->mutable_gpu_data();
 
   Dtype* input_gates_diff = gates_diff + channels_ * num_ * 0;
   Dtype* forget_gates_diff = gates_diff + channels_ * num_ * 1;
@@ -177,13 +174,13 @@ void LstmLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
   const Dtype* next_memory_state = top[1]->gpu_data();
   const Dtype* next_memory_state_diff = top[1]->gpu_diff();
 
-  Dtype* next_state_tot_diff = next_state_tot_diff_buffer_.mutable_gpu_data();
+  Dtype* next_state_tot_diff = next_state_tot_diff_buffer_->mutable_gpu_data();
   caffe_gpu_mul(num_ * channels_, output_gates, next_hidden_state_diff, next_state_tot_diff);
   caffe_gpu_add(num_ * channels_, next_memory_state_diff, next_state_tot_diff, next_state_tot_diff);
 
   caffe_gpu_mul(num_ * channels_, next_state_tot_diff, forget_gates, prev_state_diff);
 
-  Dtype* dldg_data = dldg_buffer_.mutable_gpu_data();
+  Dtype* dldg_data = dldg_buffer_->mutable_gpu_data();
 
   caffe_gpu_mul(num_ * channels_, input_gates, input_values_diff, dldg_data);
   caffe_gpu_mul(num_ * channels_, next_state_tot_diff, dldg_data, dldg_data);

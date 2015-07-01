@@ -448,10 +448,13 @@ class LstmLayer : public Layer<Dtype> {
   int M_;
   int N_;
   int K_;
-  Blob<Dtype> gates_data_buffer_;
-  Blob<Dtype> gates_diff_buffer_;
-  Blob<Dtype> next_state_tot_diff_buffer_;
-  Blob<Dtype> dldg_buffer_;
+  shared_ptr<Blob<Dtype> > input_gates_data_buffer_;
+  shared_ptr<Blob<Dtype> > forget_gates_data_buffer_;
+  shared_ptr<Blob<Dtype> > output_gates_data_buffer_;
+  shared_ptr<Blob<Dtype> > input_values_data_buffer_;
+  shared_ptr<Blob<Dtype> > gates_diff_buffer_;
+  shared_ptr<Blob<Dtype> > next_state_tot_diff_buffer_;
+  shared_ptr<Blob<Dtype> > dldg_buffer_;
 };
 
 

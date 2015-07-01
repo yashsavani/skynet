@@ -50,7 +50,8 @@ cdef extern from "caffe/layer.hpp" namespace "caffe":
         float Forward(vector[Blob*]& bottom, vector[Blob*]& top)
         float Backward(vector[Blob*]& top, vector[bool]& propagate_down, vector[Blob*]& bottom)
         LayerParameter& layer_param()
-        vector[shared_ptr[Blob]] blobs()
+        vector[shared_ptr[Blob]]& blobs()
+        vector[shared_ptr[Blob]]& buffers()
 
 cdef extern from "caffe/apollonet.hpp" namespace "caffe":
     cdef cppclass ApolloNet[float]:

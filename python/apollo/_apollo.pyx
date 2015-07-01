@@ -67,6 +67,16 @@ cdef class Layer(object):
             self.thisptr.get().layer_param().SerializeToString(&s)
             param.ParseFromString(s)
             return param
+    property buffers:
+        def __get__(self):
+            buffers = []
+            cdef vector[shared_ptr[CBlob]] cbuffers
+            (&cbuffers)[0] = self.thisptr.get().buffers()
+            for i in range(cbuffers.size()):
+                new_blob = Blob()
+                new_blob.Init(cbuffers[i])
+                buffers.append(new_blob)
+            return buffers
     property params:
         def __get__(self):
             params = []
@@ -106,14 +116,14 @@ cdef class Tensor:
         def __get__(self):
             result = tonumpyarray(self.thisptr.get().mutable_cpu_mem(),
                         self.thisptr.get().count())
-            sh = self.shape()
+            sh = self.shape
             result.shape = sh if len(sh) > 0 else (1,)
             return pynp.copy(result)
         def __set__(self, value):
             if hasattr(value, 'shape'):
                 result = tonumpyarray(self.thisptr.get().mutable_cpu_mem(),
                             self.thisptr.get().count())
-                sh = self.shape()
+                sh = self.shape
                 result.shape = sh if len(sh) > 0 else (1,)
                 result[:] = value
             else:
@@ -146,22 +156,23 @@ cdef class Blob(object):
         pass
     cdef void Init(self, shared_ptr[CBlob] other):
         self.thisptr = other
-    def shape(self):
-        return self.thisptr.get().shape()
     def count(self):
         return self.thisptr.get().count()
+    property shape:
+        def __get__(self):
+            return self.thisptr.get().shape()
     property diff:
         def __get__(self):
             result = tonumpyarray(self.thisptr.get().mutable_cpu_diff(),
                         self.thisptr.get().count())
-            sh = self.shape()
+            sh = self.shape
             result.shape = sh if len(sh) > 0 else (1,)
             return result
     property data:
         def __get__(self):
             result = tonumpyarray(self.thisptr.get().mutable_cpu_data(),
                         self.thisptr.get().count())
-            sh = self.shape()
+            sh = self.shape
             result.shape = sh if len(sh) > 0 else (1,)
             return result
 
@@ -205,7 +216,7 @@ cdef class Net:
     def backward(self):
         for layer_name in self.active_layer_names()[::-1]:
             self.backward_layer(layer_name)
-    def update(self, lr, momentum=0., clip_gradients=-1, decay_rate=0.):
+    def update(self, lr, momentum=0., clip_gradients=-1, weight_decay=0.):
         diffnorm = self.diff_l2_norm() 
         clip_scale = 1.
         if clip_gradients > 0:
@@ -216,10 +227,10 @@ cdef class Net:
             self.update_param(params[param_name],
                               lr * clip_scale * self.param_lr_mults(param_name),
                               momentum,
-                              decay_rate * self.param_decay_mults(param_name))
+                              weight_decay * self.param_decay_mults(param_name))
         self.reset_forward()
-    def update_param(self, param, lr, momentum, decay_rate):
-        param.diff_tensor.axpy(param.data_tensor, decay_rate)
+    def update_param(self, param, lr, momentum, weight_decay):
+        param.diff_tensor.axpy(param.data_tensor, weight_decay)
         param.data_tensor.axpy(param.diff_tensor, -lr)
         param.diff_tensor *= momentum
     def diff_l2_norm(self):

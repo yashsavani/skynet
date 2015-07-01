@@ -146,6 +146,13 @@ class Layer {
       const vector<Blob<Dtype>*>& bottom);
 
   /**
+   * @brief Exposes a vector of internal class buffers.
+   */
+  vector<shared_ptr<Blob<Dtype> > >& buffers() {
+    return buffers_;
+  }
+
+  /**
    * @brief Returns the vector of learnable parameter blobs.
    */
   vector<shared_ptr<Blob<Dtype> > >& blobs() {
@@ -340,12 +347,15 @@ class Layer {
  protected:
   /** The protobuf that stores the layer parameters */
   LayerParameter layer_param_;
-  /** Parameter that is updated on every forward pass */
+  /** Protobuf parameter that is updated on every forward pass */
   RuntimeParameter runtime_param_;
   /** The phase: TRAIN or TEST */
   Phase phase_;
   /** The vector that stores the learnable parameters as a set of blobs. */
   vector<shared_ptr<Blob<Dtype> > > blobs_;
+  /** Vector exposing any buffer member variables */
+  vector<shared_ptr<Blob<Dtype> > > buffers_;
+  /** The vector that stores the names of learnable parameters. */
   vector<string> param_names_;
   /** Vector indicating whether to compute the diff of each param blob. */
   vector<bool> param_propagate_down_;

@@ -72,6 +72,18 @@ void LstmLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       lstm_param.output_gate_weight_filler()));
   output_gate_weight_filler->Fill(this->blobs_[3].get());
 
+  input_gates_data_buffer_.reset(new Blob<Dtype>());
+  this->buffers_.push_back(input_gates_data_buffer_);
+  forget_gates_data_buffer_.reset(new Blob<Dtype>());
+  this->buffers_.push_back(forget_gates_data_buffer_);
+  output_gates_data_buffer_.reset(new Blob<Dtype>());
+  this->buffers_.push_back(output_gates_data_buffer_);
+  input_values_data_buffer_.reset(new Blob<Dtype>());
+  this->buffers_.push_back(input_values_data_buffer_);
+  gates_diff_buffer_.reset(new Blob<Dtype>());
+  next_state_tot_diff_buffer_.reset(new Blob<Dtype>());
+  dldg_buffer_.reset(new Blob<Dtype>());
+
   // Propagate gradients to the parameters (as directed by backward pass).
   this->param_propagate_down_.resize(this->blobs_.size(), true);
 }
@@ -83,10 +95,13 @@ void LstmLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
       << "LSTM must have a data and cell bottom";
   CHECK((this->layer_param_.top_size() == 2 || this->layer_param_.top_size() == 0))
       << "LSTM must have a data and cell top";
-  gates_data_buffer_.Reshape(num_, 4 * channels_, 1, 1);
-  gates_diff_buffer_.Reshape(num_, 4 * channels_, 1, 1);
-  next_state_tot_diff_buffer_.Reshape(num_, channels_, 1, 1);
-  dldg_buffer_.Reshape(num_, channels_, 1, 1);
+  input_gates_data_buffer_->Reshape(num_, channels_, 1, 1);
+  forget_gates_data_buffer_->Reshape(num_, channels_, 1, 1);
+  output_gates_data_buffer_->Reshape(num_, channels_, 1, 1);
+  input_values_data_buffer_->Reshape(num_, channels_, 1, 1);
+  gates_diff_buffer_->Reshape(num_, 4 * channels_, 1, 1);
+  next_state_tot_diff_buffer_->Reshape(num_, channels_, 1, 1);
+  dldg_buffer_->Reshape(num_, channels_, 1, 1);
   top[0]->Reshape(num_, channels_, 1, 1);
   top[1]->Reshape(num_, channels_, 1, 1);
 }
@@ -105,12 +120,10 @@ void LstmLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   Dtype* next_hidden_state = top[0]->mutable_cpu_data();
   Dtype* next_memory_state = top[1]->mutable_cpu_data();
 
-  Dtype* gates_data = gates_data_buffer_.mutable_cpu_data();
-
-  Dtype* input_gates = gates_data + channels_ * num_ * 0;
-  Dtype* forget_gates = gates_data + channels_ * num_ * 1;
-  Dtype* output_gates = gates_data + channels_ * num_ * 2;
-  Dtype* input_values = gates_data + channels_ * num_ * 3;
+  Dtype* input_gates = input_gates_data_buffer_->mutable_cpu_data();
+  Dtype* forget_gates = forget_gates_data_buffer_->mutable_cpu_data();
+  Dtype* output_gates = output_gates_data_buffer_->mutable_cpu_data();
+  Dtype* input_values = input_values_data_buffer_->mutable_cpu_data();
 
   caffe_cpu_gemm<Dtype>(CblasNoTrans, CblasTrans, M_, N_, K_,
     (Dtype)1., input_data, input_weight,
@@ -158,13 +171,12 @@ void LstmLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   const Dtype* forget_gate_weight = this->blobs_[2]->cpu_data();
   const Dtype* output_gate_weight = this->blobs_[3]->cpu_data();
 
-  const Dtype* gates_data = gates_data_buffer_.mutable_cpu_data();
-  Dtype* gates_diff = gates_diff_buffer_.mutable_cpu_data();
+  const Dtype* input_gates = input_gates_data_buffer_->cpu_data();
+  const Dtype* forget_gates = forget_gates_data_buffer_->cpu_data();
+  const Dtype* output_gates = output_gates_data_buffer_->cpu_data();
+  const Dtype* input_values = input_values_data_buffer_->cpu_data();
 
-  const Dtype* input_gates = gates_data + channels_ * num_ * 0;
-  const Dtype* forget_gates = gates_data + channels_ * num_ * 1;
-  const Dtype* output_gates = gates_data + channels_ * num_ * 2;
-  const Dtype* input_values = gates_data + channels_ * num_ * 3;
+  Dtype* gates_diff = gates_diff_buffer_->mutable_cpu_data();
 
   Dtype* input_gates_diff = gates_diff + channels_ * num_ * 0;
   Dtype* forget_gates_diff = gates_diff + channels_ * num_ * 1;
@@ -193,13 +205,13 @@ void LstmLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   const Dtype* next_memory_state = top[1]->cpu_data();
   const Dtype* next_memory_state_diff = top[1]->cpu_diff();
 
-  Dtype* next_state_tot_diff = next_state_tot_diff_buffer_.mutable_cpu_data();
+  Dtype* next_state_tot_diff = next_state_tot_diff_buffer_->mutable_cpu_data();
   caffe_mul(num_ * channels_, output_gates, next_hidden_state_diff, next_state_tot_diff);
   caffe_add(num_ * channels_, next_memory_state_diff, next_state_tot_diff, next_state_tot_diff);
 
   caffe_mul(num_ * channels_, next_state_tot_diff, forget_gates, prev_state_diff);
 
-  Dtype* dldg_data = dldg_buffer_.mutable_cpu_data();
+  Dtype* dldg_data = dldg_buffer_->mutable_cpu_data();
 
   caffe_mul(num_ * channels_, input_gates, input_values_diff, dldg_data);
   caffe_mul(num_ * channels_, next_state_tot_diff, dldg_data, dldg_data);

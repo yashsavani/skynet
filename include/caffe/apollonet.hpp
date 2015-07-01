@@ -102,8 +102,6 @@ class ApolloNet {
         top_blobs_[blob_name] = blob_pointer;
       }
       Blob<Dtype>* top_blob = top_blobs_[blob_name].get();
-      std::pair<set<string>::iterator,bool> ret = active_tops_set_.insert(blob_name);
-      ECHECK(ret.second, "Top with name '" << blob_name << "' is already used");
       top_vec.push_back(top_blob);
       if (top_blob->DiffInitialized() && !layer->is_loss()) {
         // Zero out top_diffs, except for loss blobs, which never change
@@ -222,7 +220,6 @@ class ApolloNet {
   void ResetForward() {
     active_layers_vec_.clear();
     active_layers_set_.clear();
-    active_tops_set_.clear();
     active_params_set_.clear();
   }
 
@@ -310,7 +307,6 @@ class ApolloNet {
   map<string, vector<string> > bottom_blob_names_;
   vector<string> active_layers_vec_;
   set<string> active_layers_set_;
-  set<string> active_tops_set_;
   set<string> active_params_set_;
 
   DISABLE_COPY_AND_ASSIGN(ApolloNet);
