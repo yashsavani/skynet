@@ -210,7 +210,14 @@ class Layer {
    *        than overwriting them to be more memory efficient
    *        by sharing their bottom_diffs with the layer below.
    */
-  virtual inline bool overwrites_delta() { return true; }
+  virtual inline bool overwrites_bottom_diffs() { return true; }
+
+  /**
+   * @brief Flag allowing layers that accumulate gradients rather
+   *        than overwriting them to be more memory efficient
+   *        by sharing their bottom_diffs with the layer below.
+   */
+  virtual inline bool overwrites_param_diffs() { return false; }
 
   /**
    * @brief Returns the layer type.

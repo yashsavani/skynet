@@ -430,6 +430,7 @@ class LstmLayer : public Layer<Dtype> {
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
 
+  virtual inline bool overwrites_param_diffs() { return true; }
   virtual inline const char* type() const { return "Lstm"; }
  protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
@@ -464,6 +465,7 @@ class WordvecLayer : public Layer<Dtype> {
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
 
+  virtual inline bool overwrites_param_diffs() { return true; }
   virtual inline const char* type() const { return "Wordvec"; }
  protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,

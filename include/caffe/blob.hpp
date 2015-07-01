@@ -229,7 +229,15 @@ class Blob {
   void Update(Dtype lr);
   void FromProto(const BlobProto& proto, bool reshape = true);
   void ToProto(BlobProto* proto, bool write_diff = false) const;
+  inline const shared_ptr<Tensor<Dtype> >& data() const {
+    CHECK(data_);
+    return data_;
+  }
 
+  inline const shared_ptr<Tensor<Dtype> >& diff() const {
+    CHECK(diff_);
+    return diff_;
+  }
   /// @brief Compute the sum of absolute values (L1 norm) of the data.
   Dtype asum_data() const;
   /// @brief Compute the sum of absolute values (L1 norm) of the diff.
@@ -273,16 +281,6 @@ class Blob {
   void L2Regularize(const Dtype decay_rate, const Blob& source);
 
  protected:
-  inline const shared_ptr<Tensor<Dtype> >& data() const {
-    CHECK(data_);
-    return data_;
-  }
-
-  inline const shared_ptr<Tensor<Dtype> >& diff() const {
-    CHECK(diff_);
-    return diff_;
-  }
-
   ComputeMode compute_mode_;
   shared_ptr<Tensor<Dtype> > data_;
   shared_ptr<Tensor<Dtype> > diff_;

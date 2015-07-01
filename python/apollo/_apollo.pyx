@@ -2,11 +2,12 @@ cimport numpy as np
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libcpp cimport bool
+from libcpp.set cimport set
 from libcpp.map cimport map
 from libcpp.map cimport pair
 from cython.operator cimport postincrement as postincrement
 from cython.operator cimport dereference as dereference
-from definitions cimport Tensor as CTensor, Blob as CBlob, Layer as CLayer, shared_ptr, LayerParameter
+from definitions cimport Tensor as CTensor, Blob as CBlob, Layer as CLayer, shared_ptr, LayerParameter, ApolloNet
 
 import numpy as pynp
 import h5py
@@ -50,21 +51,6 @@ cdef class Caffe:
         set_logging_verbosity(level)
 
 
-
-cdef extern from "caffe/apollonet.hpp" namespace "caffe":
-    cdef cppclass ApolloNet[float]:
-        ApolloNet()
-        float ForwardLayer(string layer_param_string, string runtime_param_string) except +
-        void Backward()
-        void Update(float lr, float momentum, float clip_gradients, float decay_rate)
-        void ResetForward()
-        map[string, shared_ptr[CBlob]]& blobs()
-        map[string, shared_ptr[CLayer]]& layers()
-        map[string, shared_ptr[CBlob]]& params()
-        void set_phase_test()
-        void set_phase_train()
-        void CopyTrainedLayersFrom(string trained_filename)
-
 cdef extern from "caffe/layer_factory.hpp" namespace "caffe::LayerRegistry<float>":
     cdef shared_ptr[CLayer] CreateLayer(LayerParameter& param)
 
@@ -98,30 +84,49 @@ cdef class Tensor:
         self.thisptr.reset(new CTensor())
     cdef void Init(self, shared_ptr[CTensor] other):
         self.thisptr = other
+    cdef void AddFrom(Tensor self, Tensor other):
+        self.thisptr.get().AddFrom(other.thisptr.get()[0])
+    cdef void MulFrom(Tensor self, Tensor other):
+        self.thisptr.get().MulFrom(other.thisptr.get()[0])
+    cdef void AddMulFrom(Tensor self, Tensor other, float alpha):
+        self.thisptr.get().AddMulFrom(other.thisptr.get()[0], alpha)
+    cdef void CopyFrom(Tensor self, Tensor other):
+        self.thisptr.get().CopyFrom(other.thisptr.get()[0])
     def reshape(self, pytuple):
         cdef vector[int] shape
         for x in pytuple:
             shape.push_back(x)
         self.thisptr.get().Reshape(shape)
-    def shape(self):
-        return self.thisptr.get().shape()
+    property shape:
+        def __get__(self):
+            return self.thisptr.get().shape()
     def count(self):
         return self.thisptr.get().count()
-    def mem(self):
-        result = tonumpyarray(self.thisptr.get().mutable_cpu_mem(),
-                    self.thisptr.get().count())
-        sh = self.shape()
-        result.shape = sh if len(sh) > 0 else (1,)
-        return result
-    cdef AddFrom(Tensor self, Tensor other):
-        self.thisptr.get().AddFrom(other.thisptr.get()[0])
-    cdef MulFrom(Tensor self, Tensor other):
-        self.thisptr.get().MulFrom(other.thisptr.get()[0])
-    cdef CopyFrom(Tensor self, Tensor other):
-        self.thisptr.get().CopyFrom(other.thisptr.get()[0])
+    property mem:
+        def __get__(self):
+            result = tonumpyarray(self.thisptr.get().mutable_cpu_mem(),
+                        self.thisptr.get().count())
+            sh = self.shape()
+            result.shape = sh if len(sh) > 0 else (1,)
+            return pynp.copy(result)
+        def __set__(self, value):
+            if hasattr(value, 'shape'):
+                result = tonumpyarray(self.thisptr.get().mutable_cpu_mem(),
+                            self.thisptr.get().count())
+                sh = self.shape()
+                result.shape = sh if len(sh) > 0 else (1,)
+                result[:] = value
+            else:
+                self.thisptr.get().SetValues(value)
+    def copy_from(self, other):
+        self.CopyFrom(other)
+    def axpy(self, other, alpha):
+        self.AddMulFrom(other, alpha)
     def __iadd__(self, other):
         self.AddFrom(other)
         return self
+    def __isub__(self, other):
+        self.AddMulFrom(other, -1.)
     def __imul__(self, other):
         if type(other) == type(self):
             self.MulFrom(other)
@@ -145,18 +150,39 @@ cdef class Blob(object):
         return self.thisptr.get().shape()
     def count(self):
         return self.thisptr.get().count()
-    def diff(self):
-        result = tonumpyarray(self.thisptr.get().mutable_cpu_diff(),
-                    self.thisptr.get().count())
-        sh = self.shape()
-        result.shape = sh if len(sh) > 0 else (1,)
-        return result
-    def data(self):
-        result = tonumpyarray(self.thisptr.get().mutable_cpu_data(),
-                    self.thisptr.get().count())
-        sh = self.shape()
-        result.shape = sh if len(sh) > 0 else (1,)
-        return result
+    property diff:
+        def __get__(self):
+            result = tonumpyarray(self.thisptr.get().mutable_cpu_diff(),
+                        self.thisptr.get().count())
+            sh = self.shape()
+            result.shape = sh if len(sh) > 0 else (1,)
+            return result
+    property data:
+        def __get__(self):
+            result = tonumpyarray(self.thisptr.get().mutable_cpu_data(),
+                        self.thisptr.get().count())
+            sh = self.shape()
+            result.shape = sh if len(sh) > 0 else (1,)
+            return result
+
+    property diff_tensor:
+        def __get__(self):
+            cdef shared_ptr[CTensor] ctensor = self.thisptr.get().diff()
+            diff = Tensor()
+            diff.Init(ctensor)
+            return diff
+        def __set__(self, other):
+            self.diff_tensor.copy_from(other)
+
+    property data_tensor:
+        def __get__(self):
+            cdef shared_ptr[CTensor] ctensor = self.thisptr.get().data()
+            data = Tensor()
+            data.Init(ctensor)
+            return data
+        def __set__(self, other):
+            self.data_tensor.copy_from(other)
+
         
 cdef class Net:
     cdef ApolloNet* thisptr
@@ -174,12 +200,56 @@ cdef class Net:
         return arch.forward(self)
     def forward_layer(self, layer):
         return self.thisptr.ForwardLayer(layer.p.SerializeToString(), layer.r.SerializeToString())
+    def backward_layer(self, layer_name):
+        self.thisptr.BackwardLayer(layer_name)
     def backward(self):
-        self.thisptr.Backward()
+        for layer_name in self.active_layer_names()[::-1]:
+            self.backward_layer(layer_name)
     def update(self, lr, momentum=0., clip_gradients=-1, decay_rate=0.):
-        self.thisptr.Update(lr, momentum, clip_gradients, decay_rate)
+        diffnorm = self.diff_l2_norm() 
+        clip_scale = 1.
+        if clip_gradients > 0:
+            if diffnorm > clip_gradients:
+                clip_scale = clip_gradients / diffnorm
+        params = self.params
+        for param_name in self.active_param_names():
+            self.update_param(params[param_name],
+                              lr * clip_scale * self.param_lr_mults(param_name),
+                              momentum,
+                              decay_rate * self.param_decay_mults(param_name))
+        self.reset_forward()
+    def update_param(self, param, lr, momentum, decay_rate):
+        param.diff_tensor.axpy(param.data_tensor, decay_rate)
+        param.data_tensor.axpy(param.diff_tensor, -lr)
+        param.diff_tensor *= momentum
+    def diff_l2_norm(self):
+        return self.thisptr.DiffL2Norm()
     def reset_forward(self):
         self.thisptr.ResetForward()
+    def active_layer_names(self):
+        cdef vector[string] layer_names
+        layer_names = self.thisptr.active_layer_names()
+        return layer_names
+    def active_param_names(self):
+        cdef set[string] param_set
+        (&param_set)[0] = self.thisptr.active_param_names()
+        cdef set[string].iterator it = param_set.begin()
+        cdef set[string].iterator end = param_set.end()
+        param_names = []
+        while it != end:
+            param_names.append(dereference(it))
+            postincrement(it)
+        return param_names
+    def param_lr_mults(self, name):
+        cdef map[string, float] lr_mults
+        (&lr_mults)[0] = self.thisptr.param_lr_mults()
+        return lr_mults[name]
+
+    def param_decay_mults(self, name):
+        cdef map[string, float] decay_mults
+        (&decay_mults)[0] = self.thisptr.param_decay_mults()
+        return decay_mults[name]
+
     property layers:
         def __get__(self):
             cdef map[string, shared_ptr[CLayer]] layers_map
@@ -199,6 +269,7 @@ cdef class Net:
                 postincrement(it)
 
             return layers
+
     property params:
         def __get__(self):
             cdef map[string, shared_ptr[CBlob]] param_map
@@ -243,7 +314,7 @@ cdef class Net:
         assert filename.endswith('.h5'), "saving only supports h5 files"
         with h5py.File(filename, 'w') as f:
             for name, value in self.params.items():
-                f[name] = value.data()
+                f[name] = pynp.copy(value.data)
 
     def load(self, filename):
         if len(self.params) == 0:
@@ -254,8 +325,7 @@ cdef class Net:
                 params = self.params
                 for name, stored_value in f.items():
                     if name in params:
-                        value = params[name].data()
-                        value[:] = stored_value
+                        params[name].data[:] = stored_value
         elif extension == '.caffemodel':
             self.thisptr.CopyTrainedLayersFrom(filename)
         else:
@@ -266,8 +336,7 @@ cdef class Net:
             sys.stderr.write('WARNING, copying into empty net.')
         for name, value in other.params.items():
             if name in self_params:
-                data = self_params[name].data()
-                data[:] = pynp.copy(value.data())
+                self_params[name].data[:] = pynp.copy(value.data)
 
 
 cdef extern from "caffe/proto/caffe.pb.h" namespace "caffe":
@@ -286,6 +355,7 @@ class PyRuntimeParameter(object):
         self.result = result
     def SerializeToString(self):
         return self.result
+
 def make_numpy_data_param(numpy_array):
     assert numpy_array.dtype == pynp.float32
     cdef vector[int] v
