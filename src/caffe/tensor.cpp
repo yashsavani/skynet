@@ -10,12 +10,12 @@ namespace caffe {
 
 template <typename Dtype>
 void Tensor<Dtype>::Reshape(const vector<int>& shape) {
-  CHECK_LE(shape.size(), kMaxTensorAxes);
+  ASSERT(shape.size() <= kMaxTensorAxes, "");
   count_ = 1;
   shape_.resize(shape.size());
   for (int i = 0; i < shape.size(); ++i) {
-    CHECK_GE(shape[i], 0);
-    CHECK_LE(shape[i], INT_MAX / count_) << "blob size exceeds INT_MAX";
+    ASSERT(shape[i] >= 0, "");
+    ASSERT(shape[i] <= INT_MAX / count_, "blob size exceeds INT_MAX");
     count_ *= shape[i];
     shape_[i] = shape[i];
   }
@@ -39,37 +39,37 @@ Tensor<Dtype>::Tensor(const vector<int>& shape)
 
 template <typename Dtype>
 const Dtype* Tensor<Dtype>::cpu_mem() const {
-  CHECK(mem_);
+  ASSERT(mem_, "");
   return (const Dtype*)mem_->cpu_data();
 }
 
 template <typename Dtype>
 void Tensor<Dtype>::set_cpu_mem(Dtype* data) {
-  CHECK(data);
+  ASSERT(data, "");
   mem_->set_cpu_data(data);
 }
 
 template <typename Dtype>
 const Dtype* Tensor<Dtype>::gpu_mem() const {
-  CHECK(mem_);
+  ASSERT(mem_, "");
   return (const Dtype*)mem_->gpu_data();
 }
 
 template <typename Dtype>
 Dtype* Tensor<Dtype>::mutable_cpu_mem() {
-  CHECK(mem_);
+  ASSERT(mem_, "");
   return static_cast<Dtype*>(mem_->mutable_cpu_data());
 }
 
 template <typename Dtype>
 Dtype* Tensor<Dtype>::mutable_gpu_mem() {
-  CHECK(mem_);
+  ASSERT(mem_, "");
   return static_cast<Dtype*>(mem_->mutable_gpu_data());
 }
 
 template <typename Dtype>
 void Tensor<Dtype>::ShareMem(const Tensor& other) {
-  CHECK_EQ(count_, other.count());
+  ASSERT(count_ == other.count(), "");
   mem_ = other.mem();
 }
 

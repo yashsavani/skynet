@@ -53,12 +53,12 @@ class Tensor {
    *        allowing for negative indexing (e.g., -1 for the last axis).
    */
   inline int CanonicalAxisIndex(int axis_index) const {
-    CHECK_GE(axis_index, -num_axes())
-        << "axis " << axis_index << " out of range for " << num_axes()
-        << "-D Tensor with shape " << shape_string();
-    CHECK_LT(axis_index, num_axes())
-        << "axis " << axis_index << " out of range for " << num_axes()
-        << "-D Tensor with shape " << shape_string();
+    ASSERT(axis_index >= -num_axes(),
+        "axis " << axis_index << " out of range for " << num_axes()
+        << "-D Tensor with shape " << shape_string());
+    ASSERT(axis_index < num_axes(),
+        "axis " << axis_index << " out of range for " << num_axes()
+        << "-D Tensor with shape " << shape_string());
     if (axis_index < 0) {
       return axis_index + num_axes();
     }
@@ -66,13 +66,13 @@ class Tensor {
   }
 
   inline int offset(const vector<int>& indices) const {
-    CHECK_LE(indices.size(), num_axes());
+    ASSERT(indices.size() <= num_axes(), "");
     int offset = 0;
     for (int i = 0; i < num_axes(); ++i) {
       offset *= shape(i);
       if (indices.size() > i) {
-        CHECK_GE(indices[i], 0);
-        CHECK_LT(indices[i], shape(i));
+        ASSERT(indices[i] >= 0, "");
+        ASSERT(indices[i] < shape(i), "");
         offset += indices[i];
       }
     }
@@ -86,7 +86,7 @@ class Tensor {
   }
 
   inline const shared_ptr<SyncedMemory>& mem() const {
-    CHECK(mem_);
+    ASSERT(mem_, "");
     return mem_;
   }
 

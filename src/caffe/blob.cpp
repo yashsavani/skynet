@@ -33,7 +33,7 @@ void Blob<Dtype>::Reshape(const vector<int>& shape) {
 
 template <typename Dtype>
 void Blob<Dtype>::Reshape(const BlobShape& shape) {
-  CHECK_LE(shape.dim_size(), kMaxBlobAxes);
+  ASSERT(shape.dim_size() <= kMaxBlobAxes, "");
   vector<int> shape_vec(shape.dim_size());
   for (int i = 0; i < shape.dim_size(); ++i) {
     shape_vec[i] = shape.dim(i);
@@ -61,67 +61,67 @@ Blob<Dtype>::Blob(const vector<int>& shape) {
 
 template <typename Dtype>
 const Dtype* Blob<Dtype>::cpu_data() const {
-  CHECK(data_);
+  ASSERT(data_, "");
   return (const Dtype*)data_->cpu_mem();
 }
 
 template <typename Dtype>
 void Blob<Dtype>::set_cpu_data(Dtype* data) {
-  CHECK(data);
+  ASSERT(data, "");
   data_->set_cpu_mem(data);
 }
 
 template <typename Dtype>
 const Dtype* Blob<Dtype>::gpu_data() const {
-  CHECK(data_);
+  ASSERT(data_, "");
   return (const Dtype*)data_->gpu_mem();
 }
 
 template <typename Dtype>
 const Dtype* Blob<Dtype>::cpu_diff() const {
-  CHECK(diff_);
+  ASSERT(diff_, "");
   return (const Dtype*)diff_->cpu_mem();
 }
 
 template <typename Dtype>
 const Dtype* Blob<Dtype>::gpu_diff() const {
-  CHECK(diff_);
+  ASSERT(diff_, "");
   return (const Dtype*)diff_->gpu_mem();
 }
 
 template <typename Dtype>
 Dtype* Blob<Dtype>::mutable_cpu_data() {
-  CHECK(data_);
+  ASSERT(data_, "");
   return static_cast<Dtype*>(data_->mutable_cpu_mem());
 }
 
 template <typename Dtype>
 Dtype* Blob<Dtype>::mutable_gpu_data() {
-  CHECK(data_);
+  ASSERT(data_, "");
   return static_cast<Dtype*>(data_->mutable_gpu_mem());
 }
 
 template <typename Dtype>
 Dtype* Blob<Dtype>::mutable_cpu_diff() {
-  CHECK(diff_);
+  ASSERT(diff_, "");
   return static_cast<Dtype*>(diff_->mutable_cpu_mem());
 }
 
 template <typename Dtype>
 Dtype* Blob<Dtype>::mutable_gpu_diff() {
-  CHECK(diff_);
+  ASSERT(diff_, "");
   return static_cast<Dtype*>(diff_->mutable_gpu_mem());
 }
 
 template <typename Dtype>
 void Blob<Dtype>::ShareData(const Blob& other) {
-  CHECK_EQ(count(), other.count());
+  ASSERT(count() == other.count(), "");
   data_->ShareMem(*other.data());
 }
 
 template <typename Dtype>
 void Blob<Dtype>::ShareDiff(const Blob& other) {
-  CHECK_EQ(count(), other.count());
+  ASSERT(count() == other.count(), "");
   diff_->ShareMem(*other.diff());
 }
 
@@ -234,7 +234,7 @@ void Blob<Dtype>::FromProto(const BlobProto& proto, bool reshape) {
     }
     Reshape(shape);
   } else {
-    CHECK(ShapeEquals(proto)) << "shape mismatch (reshape not set)";
+    ASSERT(ShapeEquals(proto), "shape mismatch (reshape not set)");
   }
   // copy data
   Dtype* data_vec = mutable_cpu_data();
