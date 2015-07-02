@@ -223,7 +223,7 @@ void Tensor<Dtype>::SetValues(const Dtype value) {
 #endif
     break;
   default:
-    ECHECK(false, "Unknown caffe mode.");
+    ASSERT(false, "Unknown caffe mode.");
   }
 }
 
@@ -240,7 +240,7 @@ template <> void Tensor<unsigned int>::MulFrom(const Tensor& source) {
 template <typename Dtype>
 void Tensor<Dtype>::MulFrom(const Tensor& source) {
   if (source.count() != count_ || source.shape() != shape_) {
-    ECHECK(false, "Trying to add blobs of different sizes: " << source.count() << " != " << count_);
+    ASSERT(false, "Trying to add blobs of different sizes: " << source.count() << " != " << count_);
   }
   switch (mode()) {
   case Caffe::CPU:
@@ -258,7 +258,7 @@ void Tensor<Dtype>::MulFrom(const Tensor& source) {
 #endif
     break;
   default:
-    ECHECK(false, "Unknown caffe mode.");
+    ASSERT(false, "Unknown caffe mode.");
   }
 }
 
@@ -275,7 +275,7 @@ template <> void Tensor<unsigned int>::AddFrom(const Tensor& source) {
 template <typename Dtype>
 void Tensor<Dtype>::AddFrom(const Tensor& source) {
   if (source.count() != count_ || source.shape() != shape_) {
-    ECHECK(false, "Trying to add blobs of different sizes: " << source.count() << " != " << count_);
+    ASSERT(false, "Trying to add blobs of different sizes: " << source.count() << " != " << count_);
   }
   switch (mode()) {
   case Caffe::CPU:
@@ -293,7 +293,7 @@ void Tensor<Dtype>::AddFrom(const Tensor& source) {
 #endif
     break;
   default:
-    ECHECK(false, "Unknown caffe mode.");
+    ASSERT(false, "Unknown caffe mode.");
   }
 }
 
@@ -310,7 +310,7 @@ template <> void Tensor<unsigned int>::AddMulFrom(const Tensor& source, unsigned
 template <typename Dtype>
 void Tensor<Dtype>::AddMulFrom(const Tensor& source, Dtype alpha) {
   if (source.count() != count_ || source.shape() != shape_) {
-    ECHECK(false, "Trying to add blobs of different sizes: " << source.count() << " != " << count_);
+    ASSERT(false, "Trying to add blobs of different sizes: " << source.count() << " != " << count_);
   }
   switch (mode()) {
   case Caffe::CPU:
@@ -328,7 +328,7 @@ void Tensor<Dtype>::AddMulFrom(const Tensor& source, Dtype alpha) {
 #endif
     break;
   default:
-    ECHECK(false, "Unknown caffe mode.");
+    ASSERT(false, "Unknown caffe mode.");
   }
 }
 
@@ -345,7 +345,7 @@ template <> void Tensor<unsigned int>::AddMulFromDynamicMode(const Tensor& sourc
 template <typename Dtype>
 void Tensor<Dtype>::AddMulFromDynamicMode(const Tensor& source, Dtype alpha) {
   if (source.count() != count_ || source.shape() != shape_) {
-    ECHECK(false, "Trying to add blobs of different sizes: " << source.count() << " != " << count_);
+    ASSERT(false, "Trying to add blobs of different sizes: " << source.count() << " != " << count_);
   }
   // We will perform update based on where the data is located.
   switch (mem_->head()) {

@@ -55,11 +55,11 @@ class Blob {
   void Reshape(const BlobShape& shape);
   void ReshapeLike(const Blob& other);
   inline string shape_string() const {
-    ECHECK(data_->shape() == diff_->shape(), "FATAL WARNING: data and diff counts do not match.");
+    ASSERT(data_->shape() == diff_->shape(), "FATAL WARNING: data and diff counts do not match.");
     return data_->shape_string();
   }
   inline const vector<int>& shape() const {
-    ECHECK(data_->shape() == diff_->shape(), "");
+    ASSERT(data_->shape() == diff_->shape(), "");
     return data_->shape();
   }
   /**
@@ -75,7 +75,7 @@ class Blob {
   }
   inline int num_axes() const { return shape().size(); }
   inline int count() const {
-    ECHECK(data_->count() == diff_->count(), "FATAL WARNING: data and diff counts do not match.");
+    ASSERT(data_->count() == diff_->count(), "FATAL WARNING: data and diff counts do not match.");
     return data_->count();
   }
 

@@ -30,9 +30,9 @@ class ApolloNet {
   Dtype ForwardLayer(const string& layer_param_string, const string& runtime_param_string) {
     LayerParameter active_layer_param;
     RuntimeParameter runtime_param;
-    ECHECK(runtime_param.ParseFromString(runtime_param_string), "");
-    ECHECK(active_layer_param.ParseFromString(layer_param_string), "");
-    ECHECK(active_layer_param.has_name(), "");
+    ASSERT(runtime_param.ParseFromString(runtime_param_string), "");
+    ASSERT(active_layer_param.ParseFromString(layer_param_string), "");
+    ASSERT(active_layer_param.has_name(), "");
     const string& layer_name = active_layer_param.name();
     shared_ptr<Layer<Dtype> > layer;
     const bool new_layer = layers_map_.find(layer_name) == layers_map_.end();
@@ -45,8 +45,8 @@ class ApolloNet {
     } else {
       layer = layers_map_[layer_name];
       std::pair<set<string>::iterator,bool> ret = active_layers_set_.insert(layer_name);
-      ECHECK(ret.second, "Layer with name '" << layer_name << "' is already used");
-      ECHECK(layer->layer_param().type() == active_layer_param.type(), 
+      ASSERT(ret.second, "Layer with name '" << layer_name << "' is already used");
+      ASSERT(layer->layer_param().type() == active_layer_param.type(), 
           "WARNING: layer with name '" << active_layer_param.name() << "' and different type already exists.");
     }
     layer->set_runtime_param(runtime_param);
@@ -59,7 +59,7 @@ class ApolloNet {
     bool reset_bottoms = active_layer_param.bottom_size() != bottom_names.size();
     for (int bottom_id = 0; bottom_id < active_layer_param.bottom_size(); ++bottom_id) {
       const string& blob_name = active_layer_param.bottom(bottom_id);
-      ECHECK(tops_.find(blob_name) != tops_.end(), 
+      ASSERT(tops_.find(blob_name) != tops_.end(), 
           "Could not find bottom: '" << blob_name << "' for layer: " << layer_name);
       if (bottom_names.size() > bottom_id && bottom_names[bottom_id] != blob_name) { reset_bottoms = true; }
     }
@@ -138,12 +138,12 @@ class ApolloNet {
     const string& layer_name = layer_param.name();
     if (param_size > 0) {
       // new layer has explitily named it's params
-      ECHECK(param_size == layer->blobs().size(), "Layer: '" << layer_name << "' declared an incorrect number of params");
+      ASSERT(param_size == layer->blobs().size(), "Layer: '" << layer_name << "' declared an incorrect number of params");
       for (int i = 0; i < layer->blobs().size(); ++i) {
         string param_name;
         if (layer_param.param(i).has_name()) {
           param_name = layer_param.param(i).name();
-          ECHECK(param_name.find(".p") == string::npos, "named param '" << param_name << "' cannot contain .p");
+          ASSERT(param_name.find(".p") == string::npos, "named param '" << param_name << "' cannot contain .p");
         } else {
           stringstream ss;
           ss << layer_param.name() << ".p" << i;
@@ -247,7 +247,7 @@ class ApolloNet {
       vector<shared_ptr<Blob<Dtype> > >& target_blobs =
           layers_map_[source_layer_name]->blobs();
         
-      ECHECK(target_blobs.size() == source_layer.blobs_size(),
+      ASSERT(target_blobs.size() == source_layer.blobs_size(),
           "Incompatible number of blobs for layer " << source_layer_name);
       for (int j = 0; j < target_blobs.size(); ++j) {
         const bool kReshape = false;

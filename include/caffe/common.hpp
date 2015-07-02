@@ -178,9 +178,9 @@ class Caffe {
 };
 
 #ifdef NDEBUG
-#define ECHECK(condition, stream) if (!(condition)) { throw std::runtime_error(Formatter() << __FILE__ << "(@" << __LINE__ << "): " stream); }
+#define ASSERT(condition, stream) if (!(condition)) { throw std::runtime_error(Formatter() << __FILE__ << "(@" << __LINE__ << "): " stream); }
 #else
-#define ECHECK(condition, stream) CHECK(condition) << stream
+#define ASSERT(condition, stream) CHECK(condition) << stream
 #endif
 class Formatter
 {

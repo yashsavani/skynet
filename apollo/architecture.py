@@ -24,7 +24,7 @@ class Architecture(object):
             include_phase_list = map(lambda x: x.phase, layer.include)
             if len(include_phase_list) > 0 and self.phase_map[self.phase] not in include_phase_list:
                 continue
-            new_layer = layers.UnknownLayer({})
+            new_layer = layers.Unknown({})
             new_layer.p = layer
             self.layers.append(new_layer)
         return net

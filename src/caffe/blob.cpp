@@ -203,7 +203,7 @@ void Blob<Dtype>::CopyFrom(const Blob& source, bool copy_diff, bool reshape) {
     if (reshape) {
       ReshapeLike(source);
     } else {
-      ECHECK(false, "Trying to copy blobs of different sizes.");
+      ASSERT(false, "Trying to copy blobs of different sizes.");
     }
   }
   if (copy_diff) {

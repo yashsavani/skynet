@@ -58,17 +58,17 @@ class Filler(object):
         if self.sparse is not None:
             param.sparse = self.sparse
 
-class ConcatLayer(Layer):
+class Concat(Layer):
     def __init__(self, concat_dim=None, **kwargs):
-        super(ConcatLayer, self).__init__(kwargs)
-        self.p.type = type(self).__name__[:-5]
+        super(Concat, self).__init__(kwargs)
+        self.p.type = type(self).__name__
         if concat_dim is not None:
             self.p.concat_param.concat_dim = concat_dim
 
-class ConvolutionLayer(Layer):
+class Convolution(Layer):
     def __init__(self, num_output, **kwargs):
-        super(ConvolutionLayer, self).__init__(kwargs)
-        self.p.type = type(self).__name__[:-5]
+        super(Convolution, self).__init__(kwargs)
+        self.p.type = type(self).__name__
         self.p.convolution_param.num_output = num_output
         if kwargs.get('bias_term', None) is not None:
             self.p.convolution_param.bias_term = kwargs['bias_term']
@@ -95,49 +95,49 @@ class ConvolutionLayer(Layer):
         if 'bias_filler' in kwargs:
             kwargs[bias_filler].fill(self.p.convolution_param.bias_filler)
 
-class DataLayer(Layer):
+class Data(Layer):
     def __init__(self, source, batch_size, **kwargs):
-        super(DummyDataLayer, self).__init__(kwargs)
+        super(DummyData, self).__init__(kwargs)
         self.p.type = "Data"
         self.p.data_param.source = source
         self.p.data_param.backend = DataParameter.LMDB
         self.p.data_param.batch_size = batch_size
 
-class DropoutLayer(Layer):
+class Dropout(Layer):
     def __init__(self, dropout_ratio, **kwargs):
-        super(DropoutLayer, self).__init__(kwargs)
-        self.p.type = type(self).__name__[:-5]
+        super(Dropout, self).__init__(kwargs)
+        self.p.type = type(self).__name__
         self.p.dropout_param.dropout_ratio = dropout_ratio
 
-class DummyDataLayer(Layer):
+class DummyData(Layer):
     def __init__(self, shape, **kwargs):
-        super(DummyDataLayer, self).__init__(kwargs)
-        self.p.type = type(self).__name__[:-5]
+        super(DummyData, self).__init__(kwargs)
+        self.p.type = type(self).__name__
         assert len(shape) == 4
         self.p.dummy_data_param.num.append(shape[0])
         self.p.dummy_data_param.channels.append(shape[1])
         self.p.dummy_data_param.height.append(shape[2])
         self.p.dummy_data_param.width.append(shape[3])
 
-class EuclideanLossLayer(LossLayer):
+class EuclideanLoss(LossLayer):
     def __init__(self, **kwargs):
-        super(EuclideanLossLayer, self).__init__(kwargs)
-        self.p.type = type(self).__name__[:-5]
+        super(EuclideanLoss, self).__init__(kwargs)
+        self.p.type = type(self).__name__
 
-class InnerProductLayer(Layer):
+class InnerProduct(Layer):
     def __init__(self, num_output, bias_term=None, **kwargs):
-        super(InnerProductLayer, self).__init__(kwargs)
-        self.p.type = type(self).__name__[:-5]
+        super(InnerProduct, self).__init__(kwargs)
+        self.p.type = type(self).__name__
         self.p.inner_product_param.num_output = num_output
         if 'weight_filler' in kwargs:
             kwargs['weight_filler'].fill(self.p.wordvec_param.weight_filler)
         if bias_term is not None:
             self.p.inner_product_param.bias_term = bias_term
 
-class LstmLayer(Layer):
+class Lstm(Layer):
     def __init__(self, num_cells, **kwargs):
-        super(LstmLayer, self).__init__(kwargs)
-        self.p.type = type(self).__name__[:-5]
+        super(Lstm, self).__init__(kwargs)
+        self.p.type = type(self).__name__
         self.p.lstm_param.num_cells = num_cells
         if 'weight_filler' in kwargs:
             kwargs['weight_filler'].fill(self.p.lstm_param.input_weight_filler)
@@ -145,10 +145,10 @@ class LstmLayer(Layer):
             kwargs['weight_filler'].fill(self.p.lstm_param.forget_gate_weight_filler)
             kwargs['weight_filler'].fill(self.p.lstm_param.output_gate_weight_filler)
 
-class NumpyDataLayer(Layer):
+class NumpyData(Layer):
     def __init__(self, data, **kwargs):
-        super(NumpyDataLayer, self).__init__(kwargs)
-        self.p.type = type(self).__name__[:-5]
+        super(NumpyData, self).__init__(kwargs)
+        self.p.type = type(self).__name__
         self.r = apollo.make_numpy_data_param(np.array(data, dtype=np.float32))
         # fast version of the following
         # for x in shape:
@@ -156,10 +156,10 @@ class NumpyDataLayer(Layer):
         # for x in data.flatten():
             # self.r.numpy_data_param.data.append(x)
 
-class PoolingLayer(Layer):
+class Pooling(Layer):
     def __init__(self, use_bias=False, **kwargs):
-        super(PoolingLayer, self).__init__(kwargs)
-        self.p.type = type(self).__name__[:-5]
+        super(Pooling, self).__init__(kwargs)
+        self.p.type = type(self).__name__
         if kwargs.get('kernel_size', None) is not None:
             self.p.pooling_param.kernel_size = kwargs['kernel_size']
         if kwargs.get('kernel_h', None) is not None:
@@ -181,26 +181,26 @@ class PoolingLayer(Layer):
         if kwargs.get('global_pooling', None) is not None:
             self.p.pooling_param.global_pooling = kwargs['global_pooling']
 
-class ReluLayer(Layer):
+class Relu(Layer):
     def __init__(self, **kwargs):
-        super(ReluLayer, self).__init__(kwargs)
-        self.p.type = type(self).__name__[:-5]
+        super(Relu, self).__init__(kwargs)
+        self.p.type = type(self).__name__
 
-class SoftmaxLayer(Layer):
+class Softmax(Layer):
     def __init__(self, ignore_label=None, normalize=None, **kwargs):
-        super(SoftmaxLayer, self).__init__(kwargs)
-        self.p.type = type(self).__name__[:-5]
+        super(Softmax, self).__init__(kwargs)
+        self.p.type = type(self).__name__
 
-class SoftmaxWithLossLayer(LossLayer):
+class SoftmaxWithLoss(LossLayer):
     def __init__(self, ignore_label=None, normalize=None, **kwargs):
-        super(SoftmaxWithLossLayer, self).__init__(kwargs)
-        self.p.type = type(self).__name__[:-5]
+        super(SoftmaxWithLoss, self).__init__(kwargs)
+        self.p.type = type(self).__name__
         if normalize is not None:
             self.p.loss_param.normalize = normalize
         if ignore_label is not None:
             self.p.loss_param.ignore_label = ignore_label
 
-class UnknownLayer(Layer):
+class Unknown(Layer):
     def __init__(self, p, r=None):
         self.p = p
         if r is None:
@@ -208,10 +208,10 @@ class UnknownLayer(Layer):
         else:
             self.r = r
 
-class WordvecLayer(Layer):
+class Wordvec(Layer):
     def __init__(self, dimension, vocab_size, init_range, **kwargs):
-        super(WordvecLayer, self).__init__(kwargs)
-        self.p.type = type(self).__name__[:-5]
+        super(Wordvec, self).__init__(kwargs)
+        self.p.type = type(self).__name__
         add_weight_filler(self.p.wordvec_param.weight_filler, 0.1)
         self.p.wordvec_param.dimension = dimension
         self.p.wordvec_param.vocab_size = vocab_size
