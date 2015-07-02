@@ -77,16 +77,16 @@ cdef class Layer(object):
                 new_blob.Init(cbuffers[i])
                 buffers.append(new_blob)
             return buffers
-    property params:
+    property blobs:
         def __get__(self):
-            params = []
-            cdef vector[shared_ptr[CBlob]] cparams
-            (&cparams)[0] = self.thisptr.get().blobs()
-            for i in range(cparams.size()):
+            blobs = []
+            cdef vector[shared_ptr[CBlob]] cblobs
+            (&cblobs)[0] = self.thisptr.get().blobs()
+            for i in range(cblobs.size()):
                 new_blob = Blob()
-                new_blob.Init(cparams[i])
-                params.append(new_blob)
-            return params
+                new_blob.Init(cblobs[i])
+                blobs.append(new_blob)
+            return blobs
 
 cdef class Tensor:
     cdef shared_ptr[CTensor] thisptr
@@ -207,8 +207,6 @@ cdef class Net:
             assert False, "phase must be one of ['train', 'test']"
     def __dealloc__(self):
         del self.thisptr
-    def forward(self, arch):
-        return arch.forward(self)
     def forward_layer(self, layer):
         return self.thisptr.ForwardLayer(layer.p.SerializeToString(), layer.r.SerializeToString())
     def backward_layer(self, layer_name):
@@ -301,25 +299,25 @@ cdef class Net:
 
             return blobs
 
-    property blobs:
+    property tops:
         def __get__(self):
-            cdef map[string, shared_ptr[CBlob]] blob_map
-            (&blob_map)[0] = self.thisptr.blobs()
+            cdef map[string, shared_ptr[CBlob]] top_map
+            (&top_map)[0] = self.thisptr.tops()
 
-            blobs = {}
-            cdef map[string, shared_ptr[CBlob]].iterator it = blob_map.begin()
-            cdef map[string, shared_ptr[CBlob]].iterator end = blob_map.end()
-            cdef string blob_name
-            cdef shared_ptr[CBlob] blob_ptr
+            tops = {}
+            cdef map[string, shared_ptr[CBlob]].iterator it = top_map.begin()
+            cdef map[string, shared_ptr[CBlob]].iterator end = top_map.end()
+            cdef string top_name
+            cdef shared_ptr[CBlob] top_ptr
             while it != end:
-                blob_name = dereference(it).first
-                blob_ptr = dereference(it).second
+                top_name = dereference(it).first
+                top_ptr = dereference(it).second
                 new_blob = Blob()
-                new_blob.Init(blob_ptr)
-                blobs[blob_name] = new_blob
+                new_blob.Init(top_ptr)
+                tops[top_name] = new_blob
                 postincrement(it)
 
-            return blobs
+            return tops
 
     def save(self, filename):
         assert filename.endswith('.h5'), "saving only supports h5 files"

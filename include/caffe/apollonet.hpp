@@ -59,7 +59,7 @@ class ApolloNet {
     bool reset_bottoms = active_layer_param.bottom_size() != bottom_names.size();
     for (int bottom_id = 0; bottom_id < active_layer_param.bottom_size(); ++bottom_id) {
       const string& blob_name = active_layer_param.bottom(bottom_id);
-      ECHECK(top_blobs_.find(blob_name) != top_blobs_.end(), 
+      ECHECK(tops_.find(blob_name) != tops_.end(), 
           "Could not find bottom: '" << blob_name << "' for layer: " << layer_name);
       if (bottom_names.size() > bottom_id && bottom_names[bottom_id] != blob_name) { reset_bottoms = true; }
     }
@@ -71,7 +71,7 @@ class ApolloNet {
       for (int bottom_id = 0; bottom_id < active_layer_param.bottom_size(); ++bottom_id) {
         const string& blob_name = active_layer_param.bottom(bottom_id);
         bottom_blob_names_[layer_name].push_back(blob_name);
-        shared_ptr<Blob<Dtype> > top_blob = top_blobs_[blob_name];
+        shared_ptr<Blob<Dtype> > top_blob = tops_[blob_name];
         shared_ptr<Blob<Dtype> > bottom_blob(new Blob<Dtype>(top_blob->shape()));
         bottom_blob->ShareData(*top_blob);
         if (!layer->overwrites_bottom_diffs()) {
@@ -85,7 +85,7 @@ class ApolloNet {
       // Reshape bottom_blobs to match their respective top blobs 
       for (int bottom_id = 0; bottom_id < active_layer_param.bottom_size(); ++bottom_id) {
         const string& blob_name = active_layer_param.bottom(bottom_id);
-        shared_ptr<Blob<Dtype> > top_blob = top_blobs_[blob_name];
+        shared_ptr<Blob<Dtype> > top_blob = tops_[blob_name];
         shared_ptr<Blob<Dtype> > bottom_blob = bottom_blobs_[layer_name][bottom_id];
         bottom_blob->ReshapeLike(*top_blob);
       }
@@ -97,11 +97,11 @@ class ApolloNet {
 
     for (int top_id = 0; top_id < active_layer_param.top_size(); ++top_id) {
       const string& blob_name = active_layer_param.top(top_id);
-      if (top_blobs_.find(blob_name) == top_blobs_.end()) {
+      if (tops_.find(blob_name) == tops_.end()) {
         shared_ptr<Blob<Dtype> > blob_pointer(new Blob<Dtype>());
-        top_blobs_[blob_name] = blob_pointer;
+        tops_[blob_name] = blob_pointer;
       }
-      Blob<Dtype>* top_blob = top_blobs_[blob_name].get();
+      Blob<Dtype>* top_blob = tops_[blob_name].get();
       top_vec.push_back(top_blob);
       if (top_blob->DiffInitialized() && !layer->is_loss()) {
         // Zero out top_diffs, except for loss blobs, which never change
@@ -190,7 +190,7 @@ class ApolloNet {
     vector<Blob<Dtype>*> top_vec;
     for (int top_id = 0; top_id < layer_param.top_size(); ++top_id) {
       const string& blob_name = layer_param.top(top_id);
-      top_vec.push_back(top_blobs_[blob_name].get());
+      top_vec.push_back(tops_[blob_name].get());
     }
     vector<shared_ptr<Blob<Dtype> > > bottom_blobs = bottom_blobs_[layer_name];
     vector<bool> propagate_down;
@@ -205,7 +205,7 @@ class ApolloNet {
       for (int bottom_id = 0; bottom_id < layer_param.bottom_size(); ++bottom_id) {
         const string& bottom_name = layer_param.bottom(bottom_id);
         // add layer's bottom diff buffer to previous layer's top diffs
-        top_blobs_[bottom_name]->AddDiffFrom(*bottom_vec[bottom_id]);
+        tops_[bottom_name]->AddDiffFrom(*bottom_vec[bottom_id]);
       }
     }
     if (layer->overwrites_param_diffs()) {
@@ -280,8 +280,8 @@ class ApolloNet {
   inline map<string, Dtype>& param_lr_mults() {
     return param_lr_mults_;
   }
-  inline map<string, shared_ptr<Blob<Dtype> > >& blobs() {
-    return top_blobs_;
+  inline map<string, shared_ptr<Blob<Dtype> > >& tops() {
+    return tops_;
   }
   inline map<string, shared_ptr<Layer<Dtype> > >& layers() {
     return layers_map_;
@@ -298,7 +298,7 @@ class ApolloNet {
   /// @brief Individual layers in the net
   map<string, shared_ptr<Layer<Dtype> > > layers_map_;
   /// @brief the blobs storing top results after each layer.
-  map<string, shared_ptr<Blob<Dtype> > > top_blobs_;
+  map<string, shared_ptr<Blob<Dtype> > > tops_;
   map<string, shared_ptr<Blob<Dtype> > > params_;
   map<string, shared_ptr<Blob<Dtype> > > local_params_;
   map<string, Dtype> param_decay_mults_;

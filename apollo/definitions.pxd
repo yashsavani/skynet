@@ -62,7 +62,7 @@ cdef extern from "caffe/apollonet.hpp" namespace "caffe":
         void UpdateParam(string param_name, float lr, float momentum, float decay_rate)
         void ResetForward()
         float DiffL2Norm()
-        map[string, shared_ptr[Blob]]& blobs()
+        map[string, shared_ptr[Blob]]& tops()
         map[string, shared_ptr[Layer]]& layers()
         map[string, shared_ptr[Blob]]& params()
         map[string, float]& param_decay_mults()

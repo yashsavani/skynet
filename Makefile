@@ -631,4 +631,5 @@ $(DISTRIBUTE_DIR): all py | $(DISTRIBUTE_SUBDIRS)
 -include $(DEPS)
 
 apollo: all pycaffe
-	makecython++ python/apollo/_apollo.pyx '' "$(CXXFLAGS) $(PYTHON_LDFLAGS) -lcaffe"
+	makecython++ apollo/_apollo.pyx '' "$(CXXFLAGS) $(PYTHON_LDFLAGS) -lcaffe"
+	rm apollo/_apollo.h
