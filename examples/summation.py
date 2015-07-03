@@ -2,6 +2,7 @@ import logging
 import numpy as np
 import random
 import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
+import argparse
 
 import apollo
 from apollo import layers
@@ -15,8 +16,8 @@ def get_hyper():
     hyper['momentum'] = 0.9
     hyper['clip_gradients'] = 0.1
     hyper['display_interval'] = 100
-    hyper['max_iter'] = 1000
-    hyper['snapshot_prefix'] = '/snapshots/lm'
+    hyper['max_iter'] = 5001
+    hyper['snapshot_prefix'] = '/tmp/summation'
     hyper['snapshot_interval'] = 1000
     hyper['random_seed'] = 22
     hyper['net'] = '/shared/u/apollo/examples/language_model/train_val.prototxt'
@@ -33,11 +34,14 @@ hyper = get_hyper()
 def forward(net):
     length = random.randrange(5,15)
 
-    filler = layers.Filler(type='uniform', min=-hyper['init_range'], max=hyper['init_range'])
-    net.forward_layer(layers.NumpyData(name='lstm_seed', data=np.zeros((hyper['batch_size'], hyper['mem_cells'], 1, 1))))
+    filler = layers.Filler(type='uniform', min=-hyper['init_range'],
+        max=hyper['init_range'])
+    net.forward_layer(layers.NumpyData(name='lstm_seed',
+        data=np.zeros((hyper['batch_size'], hyper['mem_cells'], 1, 1))))
     accum = np.zeros((hyper['batch_size'],))
     for step in range(length):
-        net.forward_layer(layers.DummyData(name='value%d' % step, shape=[hyper['batch_size'], 1, 1, 1]))
+        net.forward_layer(layers.DummyData(name='value%d' % step,
+            shape=[hyper['batch_size'], 1, 1, 1]))
         value = np.array([random.random() for _ in range(hyper['batch_size'])])
         accum += value
         net.tops['value%d' % step].data[:, 0, 0, 0] = value
@@ -47,20 +51,47 @@ def forward(net):
         else:
             prev_hidden = 'lstm%d_hidden' % (step - 1)
             prev_mem = 'lstm%d_mem' % (step - 1)
-        net.forward_layer(layers.Concat(name='lstm_concat%d' % step, bottoms=[prev_hidden, 'value%d' % step]))
-        net.forward_layer(layers.Lstm(name='lstm%d' % step, bottoms=['lstm_concat%d' % step, prev_mem],
+        net.forward_layer(layers.Concat(name='lstm_concat%d' % step,
+            bottoms=[prev_hidden, 'value%d' % step]))
+        net.forward_layer(layers.Lstm(name='lstm%d' % step,
+            bottoms=['lstm_concat%d' % step, prev_mem],
             param_names=['lstm_input_value', 'lstm_input_gate', 'lstm_forget_gate', 'lstm_output_gate'],
-            tops=['lstm%d_hidden' % step, 'lstm%d_mem' % step], num_cells=hyper['mem_cells'], weight_filler=filler))
+            tops=['lstm%d_hidden' % step, 'lstm%d_mem' % step],
+            num_cells=hyper['mem_cells'], weight_filler=filler))
     net.forward_layer(layers.InnerProduct(name='ip', bottoms=['lstm%d_hidden' % (length - 1)],
         num_output=1, weight_filler=filler))
-    net.forward_layer(layers.NumpyData(name='label', data=np.reshape(accum, (hyper['batch_size'], 1, 1, 1))))
+    net.forward_layer(layers.NumpyData(name='label',
+        data=np.reshape(accum, (hyper['batch_size'], 1, 1, 1))))
     loss = net.forward_layer(layers.EuclideanLoss(name='euclidean', bottoms=['ip', 'label']))
     return loss
 
+def train():
+    net = apollo.Net()
+    train_loss_hist = []
+
+    for i in range(hyper['max_iter']):
+        train_loss_hist.append(forward(net))
+        net.backward()
+        lr = (hyper['base_lr'] * (hyper['gamma'])**(i // hyper['stepsize']))
+        net.update(lr=lr, momentum=hyper['momentum'],
+            clip_gradients=hyper['clip_gradients'], weight_decay=hyper['weight_decay'])
+        if i % hyper['display_interval'] == 0:
+            logging.info('Iteration %d: %s' % (i, np.mean(train_loss_hist[-hyper['display_interval']:])))
+        if (i % hyper['snapshot_interval'] == 0 and i > 0) or i == hyper['max_iter'] - 1:
+            filename = '%s_%d.h5' % (hyper['snapshot_prefix'], i)
+            logging.info('Saving net to: %s' % filename)
+            net.save(filename)
+        if i % hyper['graph_interval'] == 0 and i > 0:
+            sub = 100
+            plt.plot(np.convolve(train_loss_hist, np.ones(sub)/sub)[sub:-sub])
+            plt.savefig('%strain_loss.jpg' % hyper['graph_prefix'])
+
 def evaluate_forward(net):
     length = 20
-    net.forward_layer(layers.NumpyData(name='prev_hidden', data=np.zeros((1, hyper['mem_cells'], 1, 1))))
-    net.forward_layer(layers.NumpyData(name='prev_mem', data=np.zeros((1, hyper['mem_cells'], 1, 1))))
+    net.forward_layer(layers.NumpyData(name='prev_hidden',
+        data=np.zeros((1, hyper['mem_cells'], 1, 1))))
+    net.forward_layer(layers.NumpyData(name='prev_mem',
+        data=np.zeros((1, hyper['mem_cells'], 1, 1))))
     filler = layers.Filler(type='uniform', min=-hyper['init_range'], max=hyper['init_range'])
     accum = np.array([0.])
     predictions = []
@@ -83,38 +114,24 @@ def evaluate_forward(net):
         net.reset_forward()
     return predictions
 
-def train():
-    random.seed(0)
-    apollo.Caffe.set_random_seed(hyper['random_seed'])
-    apollo.Caffe.set_mode_gpu()
-    apollo.Caffe.set_device(0)
-    apollo.Caffe.set_logging_verbosity(3)
-
-    net = apollo.Net()
-    train_loss_hist = []
-
-    for i in range(hyper['max_iter']):
-        train_loss_hist.append(forward(net))
-        net.backward()
-        lr = (hyper['base_lr'] * (hyper['gamma'])**(i // hyper['stepsize']))
-        net.update(lr=lr, momentum=hyper['momentum'],
-            clip_gradients=hyper['clip_gradients'], weight_decay=hyper['weight_decay'])
-        if i % hyper['display_interval'] == 0:
-            logging.info('Iteration %d: %s' % (i, np.mean(train_loss_hist[-hyper['display_interval']:])))
-        if i % hyper['snapshot_interval'] == 0 and i > 0:
-            net.save('%s_%d.h5' % (hyper['snapshot_prefix'], i))
-        if i % hyper['graph_interval'] == 0 and i > 0:
-            sub = 100
-            plt.plot(np.convolve(train_loss_hist, np.ones(sub)/sub)[sub:-sub])
-            plt.savefig('%strain_loss.jpg' % hyper['graph_prefix'])
-
 def eval():
     eval_net = apollo.Net()
     evaluate_forward(eval_net)
-    eval_net.load('/snapshots/lm_5000.h5')
+    eval_net.load('%s_%d.h5' % (hyper['snapshot_prefix'], hyper['max_iter'] - 1))
     print evaluate_forward(eval_net)
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--gpu', default=0, type=int)
+    parser.add_argument('--verbosity', default=3, type=int)
+    args = parser.parse_args()
+    random.seed(0)
+    apollo.Caffe.set_random_seed(hyper['random_seed'])
+    apollo.Caffe.set_mode_gpu()
+    apollo.Caffe.set_device(args.gpu)
+    apollo.Caffe.set_logging_verbosity(args.verbosity)
+
     train()
     eval()
 
