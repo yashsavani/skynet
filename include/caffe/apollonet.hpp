@@ -111,7 +111,7 @@ class ApolloNet {
 
     if (new_layer) {
       layer->SetUp(bottom_vec, top_vec);
-      AddParamMasters(layer);
+      AddLayerParams(layer);
     }
 
       //std::cout << "there2" << "\n";
@@ -128,7 +128,7 @@ class ApolloNet {
     return loss;
   }
 
-  void AddParamMasters(shared_ptr<Layer<Dtype> > layer) {
+  void AddLayerParams(shared_ptr<Layer<Dtype> > layer) {
     //hook up param names and lr_mults with Net
     vector<string> param_names;
     vector<Dtype> param_decay_mults;
@@ -168,12 +168,12 @@ class ApolloNet {
       const string& param_name = layer->param_names()[i];
       if (local_params_.find(param_name) == local_params_.end()) {
         local_params_[param_name] = layer->blobs()[i];
-        shared_ptr<Blob<Dtype> > master_ptr(new Blob<Dtype>(layer->blobs()[i]->shape()));
-        master_ptr->ShareData(*layer->blobs()[i]);
+        params_[param_name] = shared_ptr<Blob<Dtype> >(new Blob<Dtype>(layer->blobs()[i]->shape()));
+        //shared_ptr<Blob<Dtype> > master_ptr = params_[param_name];
+        params_[param_name]->ShareData(*local_params_[param_name]);
         if (!layer->overwrites_param_diffs()) {
-          master_ptr->ShareDiff(*layer->blobs()[i]);
+          params_[param_name]->ShareDiff(*local_params_[param_name]);
         }
-        params_[param_name] = master_ptr; 
       } else {
         layer->blobs()[i]->ShareData(*local_params_[param_name]);
         layer->blobs()[i]->ShareDiff(*local_params_[param_name]);
