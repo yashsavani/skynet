@@ -118,16 +118,7 @@ cdef class Tensor:
                         self.thisptr.get().count())
             sh = self.shape
             result.shape = sh if len(sh) > 0 else (1,)
-            return pynp.copy(result)
-        def __set__(self, value):
-            if hasattr(value, 'shape'):
-                result = tonumpyarray(self.thisptr.get().mutable_cpu_mem(),
-                            self.thisptr.get().count())
-                sh = self.shape
-                result.shape = sh if len(sh) > 0 else (1,)
-                result[:] = value
-            else:
-                self.thisptr.get().SetValues(value)
+            return result
     def copy_from(self, other):
         self.CopyFrom(other)
     def axpy(self, other, alpha):
@@ -327,7 +318,7 @@ cdef class Net:
 
     def load(self, filename):
         if len(self.params) == 0:
-            sys.stderr.write('WARNING, loading into empty net.')
+            raise ValueError('WARNING, loading into empty net.')
         _, extension = os.path.splitext(filename)
         if extension == '.h5':
             with h5py.File(filename, 'r') as f:
