@@ -20,7 +20,6 @@ def get_hyper():
     hyper['snapshot_prefix'] = '/tmp/summation'
     hyper['snapshot_interval'] = 1000
     hyper['random_seed'] = 22
-    hyper['net'] = '/shared/u/apollo/examples/language_model/train_val.prototxt'
     hyper['gamma'] = 0.5
     hyper['stepsize'] = 1000
     hyper['solver_mode'] = 'gpu'
@@ -116,6 +115,7 @@ def evaluate_forward(net):
 
 def eval():
     eval_net = apollo.Net()
+    # evaluate the net one to set up structure before loading parameters
     evaluate_forward(eval_net)
     eval_net.load('%s_%d.h5' % (hyper['snapshot_prefix'], hyper['max_iter'] - 1))
     print evaluate_forward(eval_net)

@@ -94,13 +94,13 @@ cdef class Tensor:
         self.thisptr.reset(new CTensor())
     cdef void Init(self, shared_ptr[CTensor] other):
         self.thisptr = other
-    cdef void AddFrom(Tensor self, Tensor other):
+    cdef void AddFrom(Tensor self, Tensor other) except +:
         self.thisptr.get().AddFrom(other.thisptr.get()[0])
-    cdef void MulFrom(Tensor self, Tensor other):
+    cdef void MulFrom(Tensor self, Tensor other) except +:
         self.thisptr.get().MulFrom(other.thisptr.get()[0])
-    cdef void AddMulFrom(Tensor self, Tensor other, float alpha):
+    cdef void AddMulFrom(Tensor self, Tensor other, float alpha) except +:
         self.thisptr.get().AddMulFrom(other.thisptr.get()[0], alpha)
-    cdef void CopyFrom(Tensor self, Tensor other):
+    cdef void CopyFrom(Tensor self, Tensor other) except +:
         self.thisptr.get().CopyFrom(other.thisptr.get()[0])
     def reshape(self, pytuple):
         cdef vector[int] shape

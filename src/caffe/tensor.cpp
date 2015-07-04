@@ -181,7 +181,7 @@ void Tensor<Dtype>::scale(Dtype scale_factor) {
 template <typename Dtype>
 void Tensor<Dtype>::CopyFrom(const Tensor& source) {
   if (source.count() != count_ || source.shape() != shape_) {
-    LOG(FATAL) << "Trying to copy blobs of different sizes.";
+    ASSERT(false, "Trying to copy blobs of different sizes.");
   }
   switch (mode()) {
   case Caffe::CPU:
