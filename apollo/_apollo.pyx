@@ -249,6 +249,15 @@ cdef class Net:
         cdef map[string, float] decay_mults
         (&decay_mults)[0] = self.thisptr.param_decay_mults()
         return decay_mults[name]
+    @property
+    def net_parameter(self):
+        param = caffe_pb2.NetParameter()
+        param.name = 'name'
+        layers = self.layers
+        for layer_name in self.active_layer_names():
+            layer = param.layer.add()
+            layer.CopyFrom(layers[layer_name].layer_param)
+        return param
 
     property layers:
         def __get__(self):

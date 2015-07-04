@@ -2,10 +2,10 @@ import apollo
 import numpy as np
 t = apollo.Tensor()
 t.reshape((2,3))
-t.mem = 2
+t.set_mem(2)
 v = apollo.Tensor()
 v.reshape((3,3))
-v.mem = 5
+v.set_mem(5)
 v += t
 print v.mem
 v *= 3
