@@ -1,4 +1,4 @@
-cimport numpy as np
+cimport numpy as cnp
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libcpp.set cimport set
@@ -72,3 +72,7 @@ cdef extern from "caffe/apollonet.hpp" namespace "caffe":
         void CopyTrainedLayersFrom(string trained_filename)
         vector[string]& active_layer_names()
         set[string]& active_param_names()
+
+cdef extern from "caffe/layer_factory.hpp" namespace "caffe::LayerRegistry<float>":
+    cdef shared_ptr[Layer] CreateLayer(LayerParameter& param)
+

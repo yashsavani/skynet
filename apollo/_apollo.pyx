@@ -1,26 +1,16 @@
-cimport numpy as np
+cimport numpy as cnp
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libcpp cimport bool
 from libcpp.set cimport set
 from libcpp.map cimport map
-from libcpp.map cimport pair
-from cython.operator cimport postincrement as postincrement
-from cython.operator cimport dereference as dereference
+from cython.operator cimport postincrement, dereference
 from definitions cimport Tensor as CTensor, Blob as CBlob, Layer as CLayer, shared_ptr, LayerParameter, ApolloNet
 
 import numpy as pynp
 import h5py
 import os
 import caffe_pb2
-import sys
-
-np.import_array()
-cdef public api tonumpyarray(float* data, long long size) with gil:
-    #if not (data and size >= 0): raise ValueError
-    cdef np.npy_intp dims = size
-    #NOTE: it doesn't take ownership of `data`. You must free `data` yourself
-    return np.PyArray_SimpleNewFromData(1, &dims, np.NPY_FLOAT, <void*>data)
 
 cdef extern from "caffe/caffe.hpp" namespace "caffe::Caffe":
     void set_random_seed(unsigned int)
@@ -50,9 +40,102 @@ cdef class Caffe:
     def set_logging_verbosity(level):
         set_logging_verbosity(level)
 
+cdef class Tensor:
+    cdef shared_ptr[CTensor] thisptr
+    def __cinit__(self):
+        self.thisptr.reset(new CTensor())
+    cdef void Init(self, shared_ptr[CTensor] other):
+        self.thisptr = other
+    cdef void AddFrom(Tensor self, Tensor other) except +:
+        self.thisptr.get().AddFrom(other.thisptr.get()[0])
+    cdef void MulFrom(Tensor self, Tensor other) except +:
+        self.thisptr.get().MulFrom(other.thisptr.get()[0])
+    cdef void AddMulFrom(Tensor self, Tensor other, float alpha) except +:
+        self.thisptr.get().AddMulFrom(other.thisptr.get()[0], alpha)
+    cdef void CopyFrom(Tensor self, Tensor other) except +:
+        self.thisptr.get().CopyFrom(other.thisptr.get()[0])
+    def reshape(self, pytuple):
+        cdef vector[int] shape
+        for x in pytuple:
+            shape.push_back(x)
+        self.thisptr.get().Reshape(shape)
+    property shape:
+        def __get__(self):
+            return self.thisptr.get().shape()
+    def count(self):
+        return self.thisptr.get().count()
+    def copy_from(self, other):
+        self.CopyFrom(other)
+    def set_values(self, other):
+        self.thisptr.get().SetValues(other)
+    def axpy(self, other, alpha):
+        self.AddMulFrom(other, alpha)
+    def __iadd__(self, other):
+        self.AddFrom(other)
+        return self
+    def __isub__(self, other):
+        self.AddMulFrom(other, -1.)
+    def __imul__(self, other):
+        if type(other) == type(self):
+            self.MulFrom(other)
+        else:
+            self.thisptr.get().scale(other)
+        return self
+    def get_mem(self):
+        result = tonumpyarray(self.thisptr.get().mutable_cpu_mem(),
+                    self.thisptr.get().count())
+        sh = self.shape
+        result.shape = sh if len(sh) > 0 else (1,)
+        return pynp.copy(result)
+    def set_mem(self, other):
+        result = tonumpyarray(self.thisptr.get().mutable_cpu_mem(),
+                    self.thisptr.get().count())
+        sh = self.shape
+        result.shape = sh if len(sh) > 0 else (1,)
+        result[:] = other
 
-cdef extern from "caffe/layer_factory.hpp" namespace "caffe::LayerRegistry<float>":
-    cdef shared_ptr[CLayer] CreateLayer(LayerParameter& param)
+cdef class Blob(object):
+    cdef shared_ptr[CBlob] thisptr
+    def __cinit__(self):
+        pass
+    cdef void Init(self, shared_ptr[CBlob] other):
+        self.thisptr = other
+    def count(self):
+        return self.thisptr.get().count()
+    property shape:
+        def __get__(self):
+            return self.thisptr.get().shape()
+    property data:
+        def __get__(self):
+            result = tonumpyarray(self.thisptr.get().mutable_cpu_data(),
+                        self.thisptr.get().count())
+            sh = self.shape
+            result.shape = sh if len(sh) > 0 else (1,)
+            return result
+    property diff:
+        def __get__(self):
+            result = tonumpyarray(self.thisptr.get().mutable_cpu_diff(),
+                        self.thisptr.get().count())
+            sh = self.shape
+            result.shape = sh if len(sh) > 0 else (1,)
+            return result
+    property diff_tensor:
+        def __get__(self):
+            cdef shared_ptr[CTensor] ctensor = self.thisptr.get().diff()
+            diff = Tensor()
+            diff.Init(ctensor)
+            return diff
+        def __set__(self, other):
+            self.diff_tensor.copy_from(other)
+
+    property data_tensor:
+        def __get__(self):
+            cdef shared_ptr[CTensor] ctensor = self.thisptr.get().data()
+            data = Tensor()
+            data.Init(ctensor)
+            return data
+        def __set__(self, other):
+            self.data_tensor.copy_from(other)
 
 cdef class Layer(object):
     cdef shared_ptr[CLayer] thisptr
@@ -87,104 +170,6 @@ cdef class Layer(object):
                 new_blob.Init(cblobs[i])
                 blobs.append(new_blob)
             return blobs
-
-cdef class Tensor:
-    cdef shared_ptr[CTensor] thisptr
-    def __cinit__(self):
-        self.thisptr.reset(new CTensor())
-    cdef void Init(self, shared_ptr[CTensor] other):
-        self.thisptr = other
-    cdef void AddFrom(Tensor self, Tensor other) except +:
-        self.thisptr.get().AddFrom(other.thisptr.get()[0])
-    cdef void MulFrom(Tensor self, Tensor other) except +:
-        self.thisptr.get().MulFrom(other.thisptr.get()[0])
-    cdef void AddMulFrom(Tensor self, Tensor other, float alpha) except +:
-        self.thisptr.get().AddMulFrom(other.thisptr.get()[0], alpha)
-    cdef void CopyFrom(Tensor self, Tensor other) except +:
-        self.thisptr.get().CopyFrom(other.thisptr.get()[0])
-    def reshape(self, pytuple):
-        cdef vector[int] shape
-        for x in pytuple:
-            shape.push_back(x)
-        self.thisptr.get().Reshape(shape)
-    property shape:
-        def __get__(self):
-            return self.thisptr.get().shape()
-    def count(self):
-        return self.thisptr.get().count()
-    property mem:
-        def __get__(self):
-            result = tonumpyarray(self.thisptr.get().mutable_cpu_mem(),
-                        self.thisptr.get().count())
-            sh = self.shape
-            result.shape = sh if len(sh) > 0 else (1,)
-            return result
-    def copy_from(self, other):
-        self.CopyFrom(other)
-    def axpy(self, other, alpha):
-        self.AddMulFrom(other, alpha)
-    def __iadd__(self, other):
-        self.AddFrom(other)
-        return self
-    def __isub__(self, other):
-        self.AddMulFrom(other, -1.)
-    def __imul__(self, other):
-        if type(other) == type(self):
-            self.MulFrom(other)
-        else:
-            self.thisptr.get().scale(other)
-        return self
-    def set_mem(self, other):
-        if type(self) == type(other):
-            self.CopyFrom(other)
-        else:
-            self.thisptr.get().SetValues(other)
-
-
-cdef class Blob(object):
-    cdef shared_ptr[CBlob] thisptr
-    def __cinit__(self):
-        pass
-    cdef void Init(self, shared_ptr[CBlob] other):
-        self.thisptr = other
-    def count(self):
-        return self.thisptr.get().count()
-    property shape:
-        def __get__(self):
-            return self.thisptr.get().shape()
-    property diff:
-        def __get__(self):
-            result = tonumpyarray(self.thisptr.get().mutable_cpu_diff(),
-                        self.thisptr.get().count())
-            sh = self.shape
-            result.shape = sh if len(sh) > 0 else (1,)
-            return result
-    property data:
-        def __get__(self):
-            result = tonumpyarray(self.thisptr.get().mutable_cpu_data(),
-                        self.thisptr.get().count())
-            sh = self.shape
-            result.shape = sh if len(sh) > 0 else (1,)
-            return result
-
-    property diff_tensor:
-        def __get__(self):
-            cdef shared_ptr[CTensor] ctensor = self.thisptr.get().diff()
-            diff = Tensor()
-            diff.Init(ctensor)
-            return diff
-        def __set__(self, other):
-            self.diff_tensor.copy_from(other)
-
-    property data_tensor:
-        def __get__(self):
-            cdef shared_ptr[CTensor] ctensor = self.thisptr.get().data()
-            data = Tensor()
-            data.Init(ctensor)
-            return data
-        def __set__(self, other):
-            self.data_tensor.copy_from(other)
-
         
 cdef class Net:
     cdef ApolloNet* thisptr
@@ -251,6 +236,7 @@ cdef class Net:
         return decay_mults[name]
     @property
     def net_parameter(self):
+        # will be empty if called before the forward pass or after reset_forward
         param = caffe_pb2.NetParameter()
         param.name = 'name'
         layers = self.layers
@@ -342,7 +328,7 @@ cdef class Net:
     def copy_params_from(self, other):
         self_params = self.params
         if len(self_params) == 0:
-            sys.stderr.write('WARNING, copying into empty net.')
+            raise ValueError('WARNING, loading into empty net.')
         for name, value in other.params.items():
             if name in self_params:
                 self_params[name].data[:] = pynp.copy(value.data)
@@ -373,7 +359,7 @@ def make_numpy_data_param(numpy_array):
     cdef string s = make_numpy_data_param_fast(pynp.ascontiguousarray(numpy_array.flatten()), v)
     return PyRuntimeParameter(str(s)) #s.encode('utf-8'))
 
-cdef string make_numpy_data_param_fast(np.ndarray[np.float32_t, ndim=1] numpy_array, vector[int] v):
+cdef string make_numpy_data_param_fast(cnp.ndarray[cnp.float32_t, ndim=1] numpy_array, vector[int] v):
     cdef RuntimeParameter runtime_param
     cdef NumpyDataParameter* numpy_param
     numpy_param = runtime_param.mutable_numpy_data_param()
@@ -386,3 +372,10 @@ cdef string make_numpy_data_param_fast(np.ndarray[np.float32_t, ndim=1] numpy_ar
     cdef string s
     runtime_param.SerializeToString(&s)
     return s
+
+cnp.import_array()
+cdef public api tonumpyarray(float* data, long long size) with gil:
+    #if not (data and size >= 0): raise ValueError
+    cdef cnp.npy_intp dims = size
+    #NOTE: it doesn't take ownership of `data`. You must free `data` yourself
+    return cnp.PyArray_SimpleNewFromData(1, &dims, cnp.NPY_FLOAT, <void*>data)
