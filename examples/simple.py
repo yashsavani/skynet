@@ -3,7 +3,6 @@ from apollo import layers
 import numpy as np
 
 net = apollo.Net()
-apollo.Caffe.set_mode_cpu()
 for i in range(1000):
     example = np.array(np.random.random()).reshape((1,1,1,1))
     net.forward_layer(layers.NumpyData(name='data', data=example))
@@ -12,4 +11,5 @@ for i in range(1000):
     loss = net.forward_layer(layers.EuclideanLoss(name='loss', bottoms=['conv', 'label']))
     net.backward()
     net.update(lr=0.1)
-    print loss
+    if i % 100 == 0:
+        print loss
