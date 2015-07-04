@@ -209,10 +209,9 @@ class Unknown(Layer):
             self.r = r
 
 class Wordvec(Layer):
-    def __init__(self, dimension, vocab_size, init_range, **kwargs):
+    def __init__(self, dimension, vocab_size, **kwargs):
         super(Wordvec, self).__init__(kwargs)
         self.p.type = type(self).__name__
-        add_weight_filler(self.p.wordvec_param.weight_filler, 0.1)
         self.p.wordvec_param.dimension = dimension
         self.p.wordvec_param.vocab_size = vocab_size
         if 'weight_filler' in kwargs:
