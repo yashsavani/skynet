@@ -23,7 +23,7 @@ template <typename Dtype>
 class Tensor {
  public:
   Tensor()
-       : compute_mode_(UNDEFINED), mem_(), count_(0), capacity_(0) {}
+       : mem_(), count_(0), capacity_(0) {}
 
   explicit Tensor(const vector<int>& shape);
 
@@ -107,33 +107,16 @@ class Tensor {
   void ShareMem(const Tensor& other);
 
   bool Initialized() { return mem_ ? true : false; }
-  enum ComputeMode { UNDEFINED, CPU, GPU };
   void SetValues(const Dtype value);
   void MulFrom(const Tensor& source);
   void AddFrom(const Tensor& source);
   void AddMulFrom(const Tensor& source, Dtype alpha);
   void AddMulFromDynamicMode(const Tensor& source, Dtype alpha);
   Caffe::Brew mode() {
-    Caffe::Brew brew_mode;
-    switch (compute_mode_) {
-    case UNDEFINED:
-      brew_mode = Caffe::mode();
-      break;
-    case CPU:
-      brew_mode = Caffe::CPU;
-      break;
-    case GPU:
-      brew_mode = Caffe::CPU;
-      break;
-    default:
-      LOG(FATAL) << "Undefined mode.";
-      break;
-    }
-    return brew_mode;
+    return Caffe::mode();
   }
 
  protected:
-  ComputeMode compute_mode_;
   shared_ptr<SyncedMemory> mem_;
   vector<int> shape_;
   int count_;
