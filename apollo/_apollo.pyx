@@ -143,13 +143,12 @@ cdef class Layer(object):
         pass
     cdef void Init(self, shared_ptr[CLayer] other):
         self.thisptr = other
-    property layer_param:
-        def __get__(self):
-            param = caffe_pb2.LayerParameter()
-            cdef string s
-            self.thisptr.get().layer_param().SerializeToString(&s)
-            param.ParseFromString(s)
-            return param
+    def layer_param(self):
+        param = caffe_pb2.LayerParameter()
+        cdef string s
+        self.thisptr.get().layer_param().SerializeToString(&s)
+        param.ParseFromString(s)
+        return param
     property buffers:
         def __get__(self):
             buffers = []
@@ -180,7 +179,7 @@ cdef class Net:
         elif phase == 'test':
             self.thisptr.set_phase_test()
         else:
-            assert False, "phase must be one of ['train', 'test']"
+            raise ValueError("phase must be one of ['train', 'test']")
     def __dealloc__(self):
         del self.thisptr
     def forward_layer(self, layer):
@@ -234,15 +233,14 @@ cdef class Net:
         cdef map[string, float] decay_mults
         (&decay_mults)[0] = self.thisptr.param_decay_mults()
         return decay_mults[name]
-    @property
-    def net_parameter(self):
+    def net_param(self):
         # will be empty if called before the forward pass or after reset_forward
         param = caffe_pb2.NetParameter()
         param.name = 'name'
         layers = self.layers
         for layer_name in self.active_layer_names():
             layer = param.layer.add()
-            layer.CopyFrom(layers[layer_name].layer_param)
+            layer.CopyFrom(layers[layer_name].layer_param())
         return param
 
     property layers:
