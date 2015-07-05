@@ -31,8 +31,9 @@ def get_hyper():
 hyper = get_hyper()
 
 def forward(net):
-    length = random.randrange(5,15)
+    length = random.randrange(5, 15)
 
+    # initialize all weights in [-0.1, 0.1]
     filler = layers.Filler(type='uniform', min=-hyper['init_range'],
         max=hyper['init_range'])
     net.forward_layer(layers.NumpyData(name='lstm_seed',
@@ -54,14 +55,16 @@ def forward(net):
             bottoms=[prev_hidden, 'value%d' % step]))
         net.forward_layer(layers.Lstm(name='lstm%d' % step,
             bottoms=['lstm_concat%d' % step, prev_mem],
-            param_names=['lstm_input_value', 'lstm_input_gate', 'lstm_forget_gate', 'lstm_output_gate'],
+            param_names=['input_value', 'input_gate', 'forget_gate', 'output_gate'],
             tops=['lstm%d_hidden' % step, 'lstm%d_mem' % step],
             num_cells=hyper['mem_cells'], weight_filler=filler))
-    net.forward_layer(layers.InnerProduct(name='ip', bottoms=['lstm%d_hidden' % (length - 1)],
+    net.forward_layer(layers.InnerProduct(name='ip',
+        bottoms=['lstm%d_hidden' % (length - 1)],
         num_output=1, weight_filler=filler))
     net.forward_layer(layers.NumpyData(name='label',
         data=np.reshape(accum, (hyper['batch_size'], 1, 1, 1))))
-    loss = net.forward_layer(layers.EuclideanLoss(name='euclidean', bottoms=['ip', 'label']))
+    loss = net.forward_layer(layers.EuclideanLoss(name='euclidean',
+        bottoms=['ip', 'label']))
     return loss
 
 def train():
@@ -75,7 +78,8 @@ def train():
         net.update(lr=lr, momentum=hyper['momentum'],
             clip_gradients=hyper['clip_gradients'], weight_decay=hyper['weight_decay'])
         if i % hyper['display_interval'] == 0:
-            logging.info('Iteration %d: %s' % (i, np.mean(train_loss_hist[-hyper['display_interval']:])))
+            logging.info('Iteration %d: %s' % 
+                (i, np.mean(train_loss_hist[-hyper['display_interval']:])))
         if (i % hyper['snapshot_interval'] == 0 and i > 0) or i == hyper['max_iter'] - 1:
             filename = '%s_%d.h5' % (hyper['snapshot_prefix'], i)
             logging.info('Saving net to: %s' % filename)
@@ -96,18 +100,20 @@ def evaluate_forward(net):
     predictions = []
     for step in range(length):
         value = 0.5
-        net.forward_layer(layers.NumpyData(name='value', data=np.array(value).reshape((1,1,1,1))))
+        net.forward_layer(layers.NumpyData(name='value',
+            data=np.array(value).reshape((1, 1, 1, 1))))
         accum += value
         prev_hidden = 'prev_hidden'
         prev_mem = 'prev_mem'
         net.forward_layer(layers.Concat(name='lstm_concat', bottoms=[prev_hidden, 'value']))
         net.forward_layer(layers.Lstm(name='lstm', bottoms=['lstm_concat', prev_mem],
-            param_names=['lstm_input_value', 'lstm_input_gate', 'lstm_forget_gate', 'lstm_output_gate'],
+            param_names=['input_value', 'input_gate', 'forget_gate', 'output_gate'],
             weight_filler=filler,
             tops=['next_hidden', 'next_mem'], num_cells=hyper['mem_cells']))
         net.forward_layer(layers.InnerProduct(name='ip', bottoms=['next_hidden'],
             num_output=1))
         predictions.append(float(net.tops['ip'].data.flatten()[0]))
+        # set up for next prediction by copying LSTM outputs back to inputs
         net.tops['prev_hidden'].data_tensor.copy_from(net.tops['next_hidden'].data_tensor)
         net.tops['prev_mem'].data_tensor.copy_from(net.tops['next_mem'].data_tensor)
         net.reset_forward()
@@ -115,13 +121,12 @@ def evaluate_forward(net):
 
 def eval():
     eval_net = apollo.Net()
-    # evaluate the net one to set up structure before loading parameters
+    # evaluate the net once to set up structure before loading parameters
     evaluate_forward(eval_net)
     eval_net.load('%s_%d.h5' % (hyper['snapshot_prefix'], hyper['max_iter'] - 1))
     print evaluate_forward(eval_net)
 
 def main():
-    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu', default=0, type=int)
     parser.add_argument('--verbosity', default=3, type=int)
