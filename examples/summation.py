@@ -36,14 +36,19 @@ def forward(net):
     # initialize all weights in [-0.1, 0.1]
     filler = layers.Filler(type='uniform', min=-hyper['init_range'],
         max=hyper['init_range'])
+    # initialize the LSTM memory with all 0's
     net.forward_layer(layers.NumpyData(name='lstm_seed',
         data=np.zeros((hyper['batch_size'], hyper['mem_cells'], 1, 1))))
     accum = np.zeros((hyper['batch_size'],))
+
+    # Begin recurrence through 5 - 15 inputs
     for step in range(length):
+        # Set up the value blob
         net.forward_layer(layers.DummyData(name='value%d' % step,
             shape=[hyper['batch_size'], 1, 1, 1]))
         value = np.array([random.random() for _ in range(hyper['batch_size'])])
         accum += value
+        # Set data of value blob to contain a batch of random numbers
         net.tops['value%d' % step].data[:, 0, 0, 0] = value
         if step == 0:
             prev_hidden = 'lstm_seed'
@@ -51,18 +56,25 @@ def forward(net):
         else:
             prev_hidden = 'lstm%d_hidden' % (step - 1)
             prev_mem = 'lstm%d_mem' % (step - 1)
+        # Concatenate the hidden output with the next input value 
         net.forward_layer(layers.Concat(name='lstm_concat%d' % step,
             bottoms=[prev_hidden, 'value%d' % step]))
+        # Run the LSTM for one more step
         net.forward_layer(layers.Lstm(name='lstm%d' % step,
             bottoms=['lstm_concat%d' % step, prev_mem],
             param_names=['input_value', 'input_gate', 'forget_gate', 'output_gate'],
             tops=['lstm%d_hidden' % step, 'lstm%d_mem' % step],
             num_cells=hyper['mem_cells'], weight_filler=filler))
+
+    # Add a fully connected layer with a bottom blob set to be the last used LSTM cell
+    # Note that the network structure is now a function of the data
     net.forward_layer(layers.InnerProduct(name='ip',
         bottoms=['lstm%d_hidden' % (length - 1)],
         num_output=1, weight_filler=filler))
+    # Add a label for the sum of the inputs
     net.forward_layer(layers.NumpyData(name='label',
         data=np.reshape(accum, (hyper['batch_size'], 1, 1, 1))))
+    # Compute the Euclidean loss between the preiction and label, used for backprop
     loss = net.forward_layer(layers.EuclideanLoss(name='euclidean',
         bottoms=['ip', 'label']))
     return loss
