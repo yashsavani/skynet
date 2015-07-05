@@ -1,3 +1,7 @@
+"""
+Implementation of any options for the Apollo logging system
+"""
+
 import logging
 import sys
 

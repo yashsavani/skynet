@@ -1,3 +1,7 @@
+"""
+Set of classes for building protobuf layer parameters from python
+"""
+
 import caffe_pb2
 import apollo
 from caffe_pb2 import DataParameter

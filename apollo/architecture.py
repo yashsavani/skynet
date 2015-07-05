@@ -1,3 +1,6 @@
+"""
+Class used when loading Caffe-style prototxts for legacy.py
+"""
 import caffe_pb2
 from google.protobuf.text_format import Merge
 from ._apollo import Net

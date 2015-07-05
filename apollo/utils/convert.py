@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+"""
+Tool for automatically generating python code from prototxt files.
+"""
 import caffe_pb2
 from google.protobuf.text_format import Merge
 import argparse
