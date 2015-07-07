@@ -20,6 +20,14 @@ ApolloNet<Dtype>::ApolloNet() {
 
 template <typename Dtype>
 Dtype ApolloNet<Dtype>::ForwardLayer(const string& layer_param_string, const string& runtime_param_string) {
+    /* This function will
+     * 1) Check if the layer name is in the cache
+     * 2) Create the layer if it is new
+     * 3) Set up the top blobs
+     * 4) Set up the bottom blobs
+     * 5) Set up the parameters
+     * 6) Call the Forward function */ 
+     
     LayerParameter active_layer_param;
     RuntimeParameter runtime_param;
     ASSERT(runtime_param.ParseFromString(runtime_param_string), "");
@@ -106,12 +114,9 @@ Dtype ApolloNet<Dtype>::ForwardLayer(const string& layer_param_string, const str
       AddLayerParams(layer);
     }
 
-      //std::cout << "there2" << "\n";
     for (int param_id = 0; param_id < layer->param_names().size(); ++param_id) {
-      //std::cout << "there" << "\n";
       const string& param_name = layer->param_names()[param_id];
       active_params_set_.insert(param_name);
-      //std::cout << active_params_set_.size() << "\n";
     }
 
     Dtype loss = 0;
