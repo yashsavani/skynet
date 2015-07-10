@@ -80,6 +80,7 @@ class Tensor {
   }
 
   void CopyFrom(const Tensor<Dtype>& source); 
+  void CopyChunkFrom(const Tensor<Dtype>& source, int count, int this_offset, int other_offset); 
 
   inline Dtype mem_at(const vector<int>& index) const {
     return cpu_mem()[offset(index)];
@@ -112,6 +113,7 @@ class Tensor {
   void AddFrom(const Tensor& source);
   void AddMulFrom(const Tensor& source, Dtype alpha);
   void AddMulFromDynamicMode(const Tensor& source, Dtype alpha);
+  Dtype DotPFrom(const Tensor& source);
   Caffe::Brew mode() {
     return Caffe::mode();
   }

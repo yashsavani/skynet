@@ -30,9 +30,11 @@ cdef extern from "caffe/tensor.hpp" namespace "caffe":
         void AddFrom(Tensor& other) except +
         void MulFrom(Tensor& other) except +
         void AddMulFrom(Tensor& other, float alpha) except +
+        float DotPFrom(Tensor& other) except +
         void SetValues(float value) except +
         void scale(float value) except +
         void CopyFrom(Tensor& other) except +
+        void CopyChunkFrom(Tensor& other, int count, int this_offset, int other_offset) except +
 
 cdef extern from "caffe/blob.hpp" namespace "caffe":
     cdef cppclass Blob[float]:

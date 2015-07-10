@@ -54,6 +54,10 @@ cdef class Tensor:
         self.thisptr.get().AddMulFrom(other.thisptr.get()[0], alpha)
     cdef void CopyFrom(Tensor self, Tensor other) except +:
         self.thisptr.get().CopyFrom(other.thisptr.get()[0])
+    cdef void CopyChunkFrom(Tensor self, Tensor other, int count, int this_offset, int other_offset) except +:
+        self.thisptr.get().CopyChunkFrom(other.thisptr.get()[0], count, this_offset, other_offset)
+    cdef float DotPFrom(Tensor self, Tensor other) except +:
+        return self.thisptr.get().DotPFrom(other.thisptr.get()[0])
     def reshape(self, pytuple):
         cdef vector[int] shape
         for x in pytuple:
@@ -64,8 +68,19 @@ cdef class Tensor:
             return self.thisptr.get().shape()
     def count(self):
         return self.thisptr.get().count()
+    def dot(self, other):
+        return self.DotPFrom(other)
+    def cosine(self, other):
+        num = self.dot(other) 
+        denom = (self.dot(self) * other.dot(other)) ** 0.5
+        if denom > 0.:
+            return 1 - num / denom
+        else:
+            return 2.
     def copy_from(self, other):
         self.CopyFrom(other)
+    def copy_chunk_from(self, other, count, this_offset, other_offset):
+        self.CopyChunkFrom(other, count, this_offset, other_offset)
     def set_values(self, other):
         self.thisptr.get().SetValues(other)
     def axpy(self, other, alpha):

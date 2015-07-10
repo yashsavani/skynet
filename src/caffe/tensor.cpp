@@ -179,6 +179,27 @@ void Tensor<Dtype>::scale(Dtype scale_factor) {
 }
 
 template <typename Dtype>
+void Tensor<Dtype>::CopyChunkFrom(const Tensor& source, int count, int this_offset, int other_offset) {
+  ASSERT(source.count() >= count + other_offset, "Chunk exceeds source memory: " 
+    << count << " + " << other_offset << " > " << source.count());
+  ASSERT(this->count() >= count + this_offset, "Chunk exceeds target memory: " 
+    << count << " + " << this_offset << " > " << this->count());
+
+  switch (mode()) {
+  case Caffe::CPU:
+    caffe_copy(count, source.cpu_mem() + other_offset,
+        mutable_cpu_mem() + this_offset);
+    break;
+  case Caffe::GPU:
+    caffe_copy(count, source.gpu_mem() + other_offset,
+        mutable_gpu_mem() + this_offset);
+    break;
+  default:
+    LOG(FATAL) << "Unknown caffe mode.";
+  }
+}
+
+template <typename Dtype>
 void Tensor<Dtype>::CopyFrom(const Tensor& source) {
   if (source.count() != count_ || source.shape() != shape_) {
     ASSERT(false, "Trying to copy blobs of different sizes.");
@@ -369,6 +390,44 @@ void Tensor<Dtype>::AddMulFromDynamicMode(const Tensor& source, Dtype alpha) {
   default:
     LOG(FATAL) << "Syncedmem not initialized.";
   }
+}
+
+template <> int Tensor<int>::DotPFrom(const Tensor& source) {
+  NOT_IMPLEMENTED;
+  return 0;
+}
+
+template <> unsigned int Tensor<unsigned int>::DotPFrom(const Tensor& source) {
+  NOT_IMPLEMENTED;
+  return 0;
+}
+
+template <typename Dtype>
+Dtype Tensor<Dtype>::DotPFrom(const Tensor& source) {
+  if (source.count() != count_) {
+    ASSERT(false, "Trying to dot blobs of different counts: " << source.count() << " != " << count_);
+  }
+  Dtype result;
+  switch (mode()) {
+  case Caffe::CPU:
+    result = caffe_cpu_dot(count_,
+        source.cpu_mem(),
+        this->cpu_mem());
+    break;
+  case Caffe::GPU:
+#ifndef CPU_ONLY
+    caffe_gpu_dot(count_,
+        source.gpu_mem(),
+        this->gpu_mem(),
+        &result);
+#else
+    NO_GPU;
+#endif
+    break;
+  default:
+    ASSERT(false, "Unknown caffe mode.");
+  }
+  return result;
 }
 
 
