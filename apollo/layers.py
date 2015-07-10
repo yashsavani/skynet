@@ -62,6 +62,13 @@ class Filler(object):
         if self.sparse is not None:
             param.sparse = self.sparse
 
+class CapSequence(Layer):
+    def __init__(self, sequence_lengths, **kwargs):
+        super(CapSequence, self).__init__(kwargs)
+        self.p.type = type(self).__name__
+        for x in sequence_lengths:
+            self.r.cap_sequence_param.sequence_lengths.append(x)
+
 class Concat(Layer):
     def __init__(self, concat_dim=None, **kwargs):
         super(Concat, self).__init__(kwargs)
@@ -129,14 +136,18 @@ class EuclideanLoss(LossLayer):
         self.p.type = type(self).__name__
 
 class InnerProduct(Layer):
-    def __init__(self, num_output, bias_term=None, **kwargs):
+    def __init__(self, num_output, bias_term=None, output_4d=None, **kwargs):
         super(InnerProduct, self).__init__(kwargs)
         self.p.type = type(self).__name__
         self.p.inner_product_param.num_output = num_output
         if 'weight_filler' in kwargs:
-            kwargs['weight_filler'].fill(self.p.wordvec_param.weight_filler)
+            kwargs['weight_filler'].fill(self.p.inner_product_param.weight_filler)
+        if 'bias_filler' in kwargs:
+            kwargs['bias_filler'].fill(self.p.inner_product_param.bias_filler)
         if bias_term is not None:
             self.p.inner_product_param.bias_term = bias_term
+        if output_4d is not None:
+            self.p.inner_product_param.output_4d = output_4d
 
 class Lstm(Layer):
     def __init__(self, num_cells, **kwargs):

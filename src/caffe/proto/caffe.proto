@@ -360,6 +360,7 @@ message LayerParameter {
 // rather than only being set upon Layer<Dtype> class construction.
 message RuntimeParameter {
   optional NumpyDataParameter numpy_data_param = 1;
+  optional CapSequenceParameter cap_sequence_param = 2;
 }
 
 // Message that stores parameters used to apply transformation
@@ -480,6 +481,10 @@ message LstmParameter {
 message NumpyDataParameter {
   repeated uint32 shape = 1;
   repeated float data = 2;
+}
+
+message CapSequenceParameter {
+  repeated uint32 sequence_lengths = 1;
 }
 
 message WordvecParameter {
@@ -650,6 +655,7 @@ message InnerProductParameter {
   // all preceding axes are retained in the output.
   // May be negative to index from the end (e.g., -1 for the last axis).
   optional int32 axis = 5 [default = 1];
+  optional bool output_4d = 6 [default = false];
 }
 
 // Message that stores parameters used by LogLayer
