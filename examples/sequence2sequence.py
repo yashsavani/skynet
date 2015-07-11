@@ -1,5 +1,5 @@
 """
-This example trains a sequence2sequence network to reverse the sentences found in the language model example. Convergence to perplexit < 2 is reached in approximately 50,000 iterations.
+This example trains a sequence2sequence network to reverse the sentences found in the language model example.
 """
 import numpy as np
 import random
