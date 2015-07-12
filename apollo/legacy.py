@@ -58,12 +58,12 @@ def main():
     hyper = config.get_hyper()
     hyper['weights'] = args.weights
 
-    apollo.Caffe.set_random_seed(hyper.get('random_seed', 0))
     if args.gpu is not None:
         apollo.Caffe.set_mode_gpu()
         apollo.Caffe.set_device(int(args.gpu))
     else:
         apollo.Caffe.set_mode_cpu()
+    apollo.Caffe.set_random_seed(hyper.get('random_seed', 0))
     apollo.Caffe.set_logging_verbosity(args.loglevel)
     run(hyper)
 
