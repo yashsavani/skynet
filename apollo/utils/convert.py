@@ -55,7 +55,7 @@ def parse_kernel_stride_pad(param):
 
 def parse_layer(layer):
     s = ''
-    s += 'layers.%sLayer(' % layer.type
+    s += 'layers.%s(' % layer.type
     args = []
     if layer.name:
         args.append('name="%s"' % layer.name)
@@ -75,9 +75,11 @@ def parse_layer(layer):
         s += parse_kernel_stride_pad(layer.convolution_param)
         s += ', weight_filler=%s' % parse_filler(layer.convolution_param.weight_filler)
         s += ', bias_filler=%s' % parse_filler(layer.convolution_param.bias_filler)
+        s += ', num_output=%s' % layer.convolution_param.num_output
     if len(str(layer.inner_product_param)) > 0:
         s += ', weight_filler=%s' % parse_filler(layer.inner_product_param.weight_filler)
         s += ', bias_filler=%s' % parse_filler(layer.inner_product_param.bias_filler)
+        s += ', num_output=%s' % layer.inner_product_param.num_output
     if len(str(layer.pooling_param)) > 0:
         s += parse_kernel_stride_pad(layer.pooling_param)
     return s
