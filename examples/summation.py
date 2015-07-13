@@ -141,7 +141,7 @@ def eval():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu', default=0, type=int)
-    parser.add_argument('--verbosity', default=3, type=int)
+    parser.add_argument('--loglevel', default=3, type=int)
     args = parser.parse_args()
     random.seed(0)
     apollo.Caffe.set_random_seed(hyper['random_seed'])
