@@ -28,6 +28,13 @@ class Layer(object):
                 param.name = param_names[i]
             if param_lr_mults:
                 param.lr_mult = param_lr_mults[i]
+        if 'phase' in kwargs:
+            if kwargs['phase'] == 'TRAIN':
+                self.p.phase = caffe_pb2.TRAIN
+            elif kwargs['phase'] == 'TEST':
+                self.p.phase = caffe_pb2.TEST
+            else:
+                raise ValueError('Unknown phase')
 
 class LossLayer(Layer):
     def __init__(self, kwargs):
@@ -39,28 +46,44 @@ class LossLayer(Layer):
 
 class Filler(object):
     def __init__(self, **kwargs):
-        self.type = kwargs.get('type', None)
-        self.value = kwargs.get('value', None)
-        self.min = kwargs.get('min', None)
-        self.max = kwargs.get('max', None)
-        self.mean = kwargs.get('mean', None)
-        self.std = kwargs.get('std', None)
-        self.sparse = kwargs.get('sparse', None)
-    def fill(self, param):
-        if self.type is not None:
-            param.type = self.type
-        if self.value is not None:
-            param.value = self.value
-        if self.min is not None:
-            param.min= self.min
-        if self.max is not None:
-            param.max = self.max
-        if self.mean is not None:
-            param.mean = self.mean
-        if self.std is not None:
-            param.std = self.std
-        if self.sparse is not None:
-            param.sparse = self.sparse
+        self.filler_param = caffe_pb2.FillerParameter()
+        if 'type' in kwargs:
+            self.filler_param.type = kwargs['type']
+        if 'value' in kwargs:
+            self.filler_param.value = kwargs['value']
+        if 'min' in kwargs:
+            self.filler_param.min= kwargs['min']
+        if 'max' in kwargs:
+            self.filler_param.max = kwargs['max']
+        if 'mean' in kwargs:
+            self.filler_param.mean = kwargs['mean']
+        if 'std' in kwargs:
+            self.filler_param.std = kwargs['std']
+        if 'sparse' in kwargs:
+            self.filler_param.sparse = kwargs['sparse']
+
+class Transform(object):
+    def __init__(self, **kwargs):
+        self.transform_param = caffe_pb2.TransformationParameter()
+        if 'scale' in kwargs:
+            self.transform_param.scale = kwargs['scale']
+        if 'mirror' in kwargs:
+            self.transform_param.mirror = kwargs['mirror']
+        if 'crop_size' in kwargs:
+            self.transform_param.crop_size = kwargs['crop_size']
+        if 'mean_file' in kwargs:
+            self.transform_param.mean_file = kwargs['mean_file']
+        if 'force_color' in kwargs:
+            self.transform_param.force_color = kwargs['force_color']
+        if 'force_gray' in kwargs:
+            self.transform_param.force_gray = kwargs['force_gray']
+        if 'mean_value' in kwargs:
+            for x in kwargs['mean_value']:
+                self.transform_param.mean_value.append(x)
+
+# -------------------------------------------------------------------------------
+# Begin list of layers
+# -------------------------------------------------------------------------------
 
 class CapSequence(Layer):
     def __init__(self, sequence_lengths, **kwargs):
@@ -81,30 +104,32 @@ class Convolution(Layer):
         super(Convolution, self).__init__(kwargs)
         self.p.type = type(self).__name__
         self.p.convolution_param.num_output = num_output
-        if kwargs.get('bias_term', None) is not None:
+        if 'bias_term' in kwargs:
             self.p.convolution_param.bias_term = kwargs['bias_term']
-        if kwargs.get('kernel_size', None) is not None:
+        if 'kernel_size' in kwargs:
             self.p.convolution_param.kernel_size = kwargs['kernel_size']
-        if kwargs.get('kernel_h', None) is not None:
+        if 'kernel_h' in kwargs:
             self.p.convolution_param.kernel_h = kwargs['kernel_h']
-        if kwargs.get('kernel_w', None) is not None:
+        if 'kernel_w' in kwargs:
             self.p.convolution_param.kernel_w = kwargs['kernel_w']
-        if kwargs.get('pad', None) is not None:
+        if 'pad' in kwargs:
             self.p.convolution_param.pad = kwargs['pad']
-        if kwargs.get('pad_h', None) is not None:
+        if 'pad_h' in kwargs:
             self.p.convolution_param.pad_h = kwargs['pad_h']
-        if kwargs.get('pad_w', None) is not None:
+        if 'pad_w' in kwargs:
             self.p.convolution_param.pad_w = kwargs['pad_w']
-        if kwargs.get('stride', None) is not None:
+        if 'stride' in kwargs:
             self.p.convolution_param.stride = kwargs['stride']
-        if kwargs.get('stride_h', None) is not None:
+        if 'stride_h' in kwargs:
             self.p.convolution_param.stride_h = kwargs['stride_h']
-        if kwargs.get('stride_w', None) is not None:
+        if 'stride_w' in kwargs:
             self.p.convolution_param.stride_w = kwargs['stride_w']
+        if 'group' in kwargs:
+            self.p.convolution_param.group = kwargs['group']
         if 'weight_filler' in kwargs:
-            kwargs[weight_filler].fill(self.p.convolution_param.weight_filler)
+            self.p.convolution_param.weight_filler.CopyFrom(kwargs['weight_filler'].filler_param)
         if 'bias_filler' in kwargs:
-            kwargs[bias_filler].fill(self.p.convolution_param.bias_filler)
+            self.p.convolution_param.bias_filler.CopyFrom(kwargs['bias_filler'].filler_param)
 
 class Data(Layer):
     def __init__(self, source, batch_size, **kwargs):
@@ -135,19 +160,41 @@ class EuclideanLoss(LossLayer):
         super(EuclideanLoss, self).__init__(kwargs)
         self.p.type = type(self).__name__
 
+class ImageData(Layer):
+    def __init__(self, source, batch_size, new_height=None, new_width=None, **kwargs):
+        super(ImageData, self).__init__(kwargs)
+        self.p.type = type(self).__name__
+        self.p.image_data_param.source = source
+        self.p.image_data_param.batch_size = batch_size
+        if new_height is not None:
+            self.p.image_data_param.new_height = new_height
+        if new_width is not None:
+            self.p.image_data_param.new_width = new_width
+        if 'transform' in kwargs:
+            self.p.transform_param.CopyFrom(kwargs['transform'].transform_param)
+
+
 class InnerProduct(Layer):
     def __init__(self, num_output, bias_term=None, output_4d=None, **kwargs):
         super(InnerProduct, self).__init__(kwargs)
         self.p.type = type(self).__name__
         self.p.inner_product_param.num_output = num_output
         if 'weight_filler' in kwargs:
-            kwargs['weight_filler'].fill(self.p.inner_product_param.weight_filler)
+            self.p.inner_product_param.weight_filler.CopyFrom(kwargs['weight_filler'].filler_param)
         if 'bias_filler' in kwargs:
-            kwargs['bias_filler'].fill(self.p.inner_product_param.bias_filler)
+            self.p.inner_product_param.bias_filler.CopyFrom(kwargs['bias_filler'].filler_param)
         if bias_term is not None:
             self.p.inner_product_param.bias_term = bias_term
         if output_4d is not None:
             self.p.inner_product_param.output_4d = output_4d
+
+class LRN(Layer):
+    def __init__(self, local_size, alpha, beta, **kwargs):
+        super(LRN, self).__init__(kwargs)
+        self.p.type = type(self).__name__
+        self.p.lrn_param.local_size = local_size
+        self.p.lrn_param.alpha = alpha
+        self.p.lrn_param.beta = beta
 
 class Lstm(Layer):
     def __init__(self, num_cells, **kwargs):
@@ -155,10 +202,10 @@ class Lstm(Layer):
         self.p.type = type(self).__name__
         self.p.lstm_param.num_cells = num_cells
         if 'weight_filler' in kwargs:
-            kwargs['weight_filler'].fill(self.p.lstm_param.input_weight_filler)
-            kwargs['weight_filler'].fill(self.p.lstm_param.input_gate_weight_filler)
-            kwargs['weight_filler'].fill(self.p.lstm_param.forget_gate_weight_filler)
-            kwargs['weight_filler'].fill(self.p.lstm_param.output_gate_weight_filler)
+            self.p.lstm_param.input_weight_filler.CopyFrom(kwargs['weight_filler'].filler_param)
+            self.p.lstm_param.input_gate_weight_filler.CopyFrom(kwargs['weight_filler'].filler_param)
+            self.p.lstm_param.forget_gate_weight_filler.CopyFrom(kwargs['weight_filler'].filler_param)
+            self.p.lstm_param.output_gate_weight_filler.CopyFrom(kwargs['weight_filler'].filler_param)
 
 class NumpyData(Layer):
     def __init__(self, data, **kwargs):
@@ -175,30 +222,39 @@ class Pooling(Layer):
     def __init__(self, use_bias=False, **kwargs):
         super(Pooling, self).__init__(kwargs)
         self.p.type = type(self).__name__
-        if kwargs.get('kernel_size', None) is not None:
+        if 'kernel_size' in kwargs:
             self.p.pooling_param.kernel_size = kwargs['kernel_size']
-        if kwargs.get('kernel_h', None) is not None:
+        if 'kernel_h' in kwargs:
             self.p.pooling_param.kernel_h = kwargs['kernel_h']
-        if kwargs.get('kernel_w', None) is not None:
+        if 'kernel_w' in kwargs:
             self.p.pooling_param.kernel_w = kwargs['kernel_w']
-        if kwargs.get('pad', None) is not None:
+        if 'pad' in kwargs:
             self.p.pooling_param.pad = kwargs['pad']
-        if kwargs.get('pad_h', None) is not None:
+        if 'pad_h' in kwargs:
             self.p.pooling_param.pad_h = kwargs['pad_h']
-        if kwargs.get('pad_w', None) is not None:
+        if 'pad_w' in kwargs:
             self.p.pooling_param.pad_w = kwargs['pad_w']
-        if kwargs.get('stride', None) is not None:
+        if 'stride' in kwargs:
             self.p.pooling_param.stride = kwargs['stride']
-        if kwargs.get('stride_h', None) is not None:
+        if 'stride_h' in kwargs:
             self.p.pooling_param.stride_h = kwargs['stride_h']
-        if kwargs.get('stride_w', None) is not None:
+        if 'stride_w' in kwargs:
             self.p.pooling_param.stride_w = kwargs['stride_w']
-        if kwargs.get('global_pooling', None) is not None:
+        if 'global_pooling' in kwargs:
             self.p.pooling_param.global_pooling = kwargs['global_pooling']
+        if 'pool' in kwargs:
+            if kwargs['pool'] == 'MAX':
+                self.p.pooling_param.PoolMethod = caffe_pb2.PoolingParameter.MAX
+            elif kwargs['pool'] == 'AVG':
+                self.p.pooling_param.PoolMethod = caffe_pb2.PoolingParameter.AVG
+            elif kwargs['pool'] == 'STOCHASTIC':
+                self.p.pooling_param.PoolMethod = caffe_pb2.PoolingParameter.STOCHASTIC
+            else:
+                raise ValueError('Unknown pooling method')
 
-class Relu(Layer):
+class ReLU(Layer):
     def __init__(self, **kwargs):
-        super(Relu, self).__init__(kwargs)
+        super(ReLU, self).__init__(kwargs)
         self.p.type = type(self).__name__
 
 class Softmax(Layer):
@@ -230,4 +286,4 @@ class Wordvec(Layer):
         self.p.wordvec_param.dimension = dimension
         self.p.wordvec_param.vocab_size = vocab_size
         if 'weight_filler' in kwargs:
-            kwargs['weight_filler'].fill(self.p.wordvec_param.weight_filler)
+            self.p.wordvec_param.weight_filler.CopyFrom(kwargs['weight_filler'].filler_param)
