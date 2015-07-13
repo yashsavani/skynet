@@ -212,6 +212,14 @@ class Layer {
     return false;
   }
 
+  inline bool in_place_layer() {
+    const bool is_in_place = (layer_param_.top_size() == 1 && layer_param_.bottom_size() == 1
+            && layer_param_.top(0) == layer_param_.bottom(0));
+    if (is_in_place) {
+      ASSERT(overwrites_bottom_diffs(), "in place layers must overwrite their bottoms");
+    }
+    return is_in_place;
+  }
   /**
    * @brief Flag allowing layers that accumulate gradients rather
    *        than overwriting them to be more memory efficient

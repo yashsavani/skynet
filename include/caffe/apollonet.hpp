@@ -34,6 +34,7 @@ class ApolloNet {
     active_layers_vec_.clear();
     active_layers_set_.clear();
     active_params_set_.clear();
+    active_tops_set_.clear();
   }
 
   void AddLayerParams(shared_ptr<Layer<Dtype> > layer);
@@ -94,6 +95,7 @@ class ApolloNet {
   vector<string> active_layers_vec_;
   set<string> active_layers_set_;
   set<string> active_params_set_;
+  set<string> active_tops_set_;
 
   DISABLE_COPY_AND_ASSIGN(ApolloNet);
 };

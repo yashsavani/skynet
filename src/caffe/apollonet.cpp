@@ -74,7 +74,7 @@ Dtype ApolloNet<Dtype>::ForwardLayer(const string& layer_param_string, const str
         shared_ptr<Blob<Dtype> > top_blob = tops_[blob_name];
         shared_ptr<Blob<Dtype> > bottom_blob(new Blob<Dtype>(top_blob->shape()));
         bottom_blob->ShareData(*top_blob);
-        if (!layer->overwrites_bottom_diffs()) {
+        if (layer->in_place_layer() || !layer->overwrites_bottom_diffs()) {
           // if layer accumulates delta rather than overwriting, we can save memory
           bottom_blob->ShareDiff(*top_blob);
         }
@@ -102,6 +102,10 @@ Dtype ApolloNet<Dtype>::ForwardLayer(const string& layer_param_string, const str
         tops_[blob_name] = blob_pointer;
       }
       Blob<Dtype>* top_blob = tops_[blob_name].get();
+      if (!layer->in_place_layer()) {
+        std::pair<set<string>::iterator,bool> ret = active_tops_set_.insert(blob_name);
+        ASSERT(ret.second, "Top with name '" << blob_name << "' is already used");
+      }
       top_vec.push_back(top_blob);
       if (top_blob->DiffInitialized() && !layer->is_loss()) {
         // Zero out top_diffs, except for loss blobs, which never change
@@ -199,7 +203,7 @@ void ApolloNet<Dtype>::BackwardLayer(const string& layer_name) {
   }
   layer->Backward(top_vec, propagate_down, bottom_vec);
 
-  if (layer->overwrites_bottom_diffs()) {
+  if (layer->overwrites_bottom_diffs() && !layer->in_place_layer()) {
     // if layer overwrites bottom_diff
     for (int bottom_id = 0; bottom_id < layer_param.bottom_size(); ++bottom_id) {
       const string& bottom_name = layer_param.bottom(bottom_id);
