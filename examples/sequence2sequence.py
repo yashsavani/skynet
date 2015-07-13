@@ -15,7 +15,7 @@ from scipy.spatial.distance import cosine
 
 def get_hyper():
     hyper = {}
-    hyper['vocab_size'] = 10000
+    hyper['vocab_size'] = 100 #10000 use small vocab for example
     hyper['batch_size'] = 32
     hyper['init_range'] = 0.1
     hyper['zero_symbol'] = hyper['vocab_size'] - 1
@@ -132,8 +132,6 @@ def forward(net, sentence_batches):
         if step == 0:
             prev_hidden = 'hidden_seed'
             prev_mem = 'mem_seed'
-            prev_hidden = 'source_lstm%d_hidden' % (length - 1)
-            prev_mem = 'source_lstm%d_mem' % (length - 1)
             word = np.zeros(target_batch[:, 0].shape)
         else:
             prev_hidden = 'lstm%d_hidden' % (step - 1)
