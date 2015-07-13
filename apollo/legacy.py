@@ -16,7 +16,7 @@ def run(hyper):
 
     arch.forward(net)
     if hyper['weights']:
-        print 'loading'
+        print 'loading weights from %s' % hyper['weights']
         net.load(hyper['weights'])
     net.reset_forward()
 
@@ -43,12 +43,14 @@ def run(hyper):
             error = []
         if i % hyper['test_interval'] == 0:
             test_performance(net, test_net)
+            if 'accuracy' in test_net.tops:
+                logging.info('Accuracy: %.2f' % test_net.tops['accuracy'].data.flatten()[0])
         if i % hyper['snapshot_interval'] == 0 and i > 0:
             net.save('%s_%d.h5' % (hyper['snapshot_prefix'], i))
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--loglevel', default=3)
+    parser.add_argument('--loglevel', default=3, type=int)
     parser.add_argument('--gpu', default=None)
     parser.add_argument('--weights', default=None)
     parser.add_argument('--solver')
