@@ -12,7 +12,6 @@ import os
 import apollo
 from apollo import layers
 from apollo.models import alexnet
-
 apollo_root = os.environ['APOLLO_ROOT']
 
 def get_hyper():
@@ -46,9 +45,18 @@ def forward(net):
     net.forward_layer(data)
     
     alexnet_layers = alexnet.alexnet_layers()
-    loss = 0.
-    for layer in alexnet_layers:
-        loss += net.forward_layer(layer)
+    for layer in alexnet_layers[:-2]:
+        net.forward_layer(layer)
+
+    # initialize fc8 from random weights
+    fc8_flickr = alexnet_layers[-2]
+    fc8_flickr.p.name = 'fc8_flickr'
+    fc8_flickr.p.top[0] = 'fc8_flickr'
+    net.forward_layer(fc8_flickr)
+
+    softmax_loss = alexnet_layers[-1]
+    softmax_loss.p.bottom[0] = 'fc8_flickr'
+    loss = net.forward_layer(softmax_loss)
 
     return loss
 

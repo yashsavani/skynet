@@ -136,7 +136,7 @@ class Convolution(Layer):
 
 class Data(Layer):
     def __init__(self, source, batch_size, **kwargs):
-        super(DummyData, self).__init__(kwargs)
+        super(Data, self).__init__(kwargs)
         self.p.type = "Data"
         self.p.data_param.source = source
         self.p.data_param.backend = DataParameter.LMDB
