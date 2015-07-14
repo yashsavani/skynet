@@ -11,6 +11,8 @@ import os
 
 import apollo
 from apollo import layers
+from apollo.models import alexnet
+
 apollo_root = os.environ['APOLLO_ROOT']
 
 def get_hyper():
@@ -42,76 +44,11 @@ def forward(net):
     data = layers.ImageData(name="data", tops=["data", "label"], source="data/flickr_style/train.txt",
         batch_size=50, new_height=256, new_width=256, transform=transform)
     net.forward_layer(data)
-
-    conv_weight_filler = layers.Filler(type="gaussian", std=0.01)
-    bias_filler0 = layers.Filler(type="constant", value=0.0)
-    bias_filler1 = layers.Filler(type="constant", value=1.0)
-    conv_lr_mults = [1.0, 2.0]
-
-    conv1 = layers.Convolution(name="conv1", bottoms=["data"], param_lr_mults=conv_lr_mults, kernel_size=11,
-        stride=4, weight_filler=conv_weight_filler, bias_filler=bias_filler0, num_output=96)
-    relu1 = layers.ReLU(name="relu1", bottoms=["conv1"], tops=["conv1"])
-    pool1 = layers.Pooling(name="pool1", bottoms=["conv1"], kernel_size=3, stride=2)
-    lrn1 = layers.LRN(name="norm1", bottoms=["pool1"], local_size=5, alpha=0.0001, beta=0.75)
-    net.forward_layer(conv1)
-    net.forward_layer(relu1)
-    net.forward_layer(pool1)
-    net.forward_layer(lrn1)
-
-    conv2 = layers.Convolution(name="conv2", bottoms=["norm1"], param_lr_mults=conv_lr_mults, kernel_size=5,
-        pad=2, group=2, weight_filler=conv_weight_filler, bias_filler=bias_filler1, num_output=256)
-    relu2 = layers.ReLU(name="relu2", bottoms=["conv2"], tops=["conv2"])
-    pool2 = layers.Pooling(name="pool2", bottoms=["conv2"], kernel_size=3, stride=2)
-    lrn2 = layers.LRN(name="norm2", bottoms=["pool2"], local_size=5, alpha=0.0001, beta=0.75)
-    net.forward_layer(conv2)
-    net.forward_layer(relu2)
-    net.forward_layer(pool2)
-    net.forward_layer(lrn2)
-
-    conv3 = layers.Convolution(name="conv3", bottoms=["norm2"], param_lr_mults=conv_lr_mults, kernel_size=3,
-        pad=1, weight_filler=conv_weight_filler, bias_filler=bias_filler0, num_output=384)
-    relu3 = layers.ReLU(name="relu3", bottoms=["conv3"], tops=["conv3"])
-
-    conv4 = layers.Convolution(name="conv4", bottoms=["conv3"], param_lr_mults=conv_lr_mults, kernel_size=3,
-        pad=1, group=2, weight_filler=conv_weight_filler, bias_filler=bias_filler1, num_output=384)
-    relu4 = layers.ReLU(name="relu4", bottoms=["conv4"], tops=["conv4"])
-    net.forward_layer(conv3)
-    net.forward_layer(relu3)
-    net.forward_layer(conv4)
-    net.forward_layer(relu4)
-
-    conv5 = layers.Convolution(name="conv5", bottoms=["conv4"], param_lr_mults=conv_lr_mults, kernel_size=3,
-        pad=1, group=2, weight_filler=conv_weight_filler, bias_filler=bias_filler1, num_output=256)
-    relu5 = layers.ReLU(name="relu5", bottoms=["conv5"], tops=["conv5"])
-    pool5 = layers.Pooling(name="pool5", bottoms=["conv5"], kernel_size=3, stride=2)
-    net.forward_layer(conv5)
-    net.forward_layer(relu5)
-    net.forward_layer(pool5)
-
-    fc6 = layers.InnerProduct(name="fc6", bottoms=["pool5"], param_lr_mults=conv_lr_mults,
-        weight_filler=layers.Filler(type="gaussian", std=0.005),
-        bias_filler=bias_filler1, num_output=4096)
-    relu6 = layers.ReLU(name="relu6", bottoms=["fc6"], tops=["fc6"])
-    drop6 = layers.Dropout(name="drop6", bottoms=["fc6"], tops=["fc6"], dropout_ratio=0.5, phase='TRAIN')
-    net.forward_layer(fc6)
-    net.forward_layer(relu6)
-    net.forward_layer(drop6)
-
-    fc7 = layers.InnerProduct(name="fc7", bottoms=["fc6"], param_lr_mults=[1.0, 2.0],
-        weight_filler=layers.Filler(type="gaussian", std=0.005),
-        bias_filler=bias_filler1, num_output=4096)
-    relu7 = layers.ReLU(name="relu7", bottoms=["fc7"], tops=["fc7"])
-    drop7 = layers.Dropout(name="drop7", bottoms=["fc7"], tops=["fc7"], dropout_ratio=0.5, phase='TRAIN')
-    fc8 = layers.InnerProduct(name="fc8_flickr", bottoms=["fc7"], param_lr_mults=[10.0, 20.0],
-        weight_filler=layers.Filler(type="gaussian", std=0.01),
-        bias_filler=bias_filler0, num_output=20)
-    net.forward_layer(fc7)
-    net.forward_layer(relu7)
-    net.forward_layer(drop7)
-    net.forward_layer(fc8)
-
-    softmax_loss = layers.SoftmaxWithLoss(name="loss", bottoms=["fc8_flickr", "label"])
-    loss = net.forward_layer(softmax_loss)
+    
+    alexnet_layers = alexnet.alexnet_layers()
+    loss = 0.
+    for layer in alexnet_layers:
+        loss += net.forward_layer(layer)
 
     return loss
 

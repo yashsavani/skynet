@@ -14,6 +14,7 @@ class Layer(object):
         tops = kwargs.get('tops', [name])
         param_names = kwargs.get('param_names', [])
         param_lr_mults = kwargs.get('param_lr_mults', [])
+        param_decay_mults = kwargs.get('param_decay_mults', [])
         assert type(tops) != str and type(bottoms) != str and type(param_names) != str
         self.p = caffe_pb2.LayerParameter()
         self.r = caffe_pb2.RuntimeParameter()
@@ -22,12 +23,14 @@ class Layer(object):
             self.p.top.append(blob_name)
         for blob_name in bottoms:
             self.p.bottom.append(blob_name)
-        for i in range(max(len(param_names), len(param_lr_mults))):
+        for i in range(max(len(param_names), len(param_lr_mults), len(param_decay_mults))):
             param = self.p.param.add()
             if param_names:
                 param.name = param_names[i]
             if param_lr_mults:
                 param.lr_mult = param_lr_mults[i]
+            if param_decay_mults:
+                param.decay_mult = param_decay_mults[i]
         if 'phase' in kwargs:
             if kwargs['phase'] == 'TRAIN':
                 self.p.phase = caffe_pb2.TRAIN
