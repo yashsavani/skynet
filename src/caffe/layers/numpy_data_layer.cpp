@@ -17,6 +17,7 @@ void NumpyDataLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
   vector<int> shape;
   for (int i = 0; i < this->runtime_param().numpy_data_param().shape_size(); ++i) {
     shape.push_back(this->runtime_param().numpy_data_param().shape(i));
+    ASSERT(shape[i] > 0, "All numpy data dimensions must be non-zero");
   }
   top[0]->Reshape(shape);
 }
