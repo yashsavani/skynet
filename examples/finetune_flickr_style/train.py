@@ -18,7 +18,7 @@ def get_hyper():
     hyper = {}
     hyper['net_prototxt'] = "models/finetune_flickr_style/train_val.prototxt"
     hyper['test_iter'] = 100
-    hyper['test_interval'] = 100
+    hyper['test_interval'] = 1000
     # lr for fine-tuning should be lower than when starting from scratch
     hyper['base_lr'] = 0.001
     hyper['lr_policy'] = "step"
@@ -65,7 +65,7 @@ def train():
 
     forward(net)
     net.reset_forward()
-    net.load('models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel')
+    net.load(alexnet.weights_file())
     train_loss_hist = []
 
     for i in range(hyper['max_iter']):

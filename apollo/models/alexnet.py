@@ -1,6 +1,13 @@
+import os
+
 from apollo import layers
 
-weights_file = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
+def weights_file():
+    filename = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
+    if not os.path.exists(filename):
+        raise OSError('Please download the CaffeNet model first with \
+            ./scripts/download_model_binary.py models/bvlc_reference_caffenet')
+    return filename
 
 def alexnet_layers():
     conv_weight_filler = layers.Filler(type="gaussian", std=0.01)
