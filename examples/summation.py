@@ -147,7 +147,7 @@ def main():
     apollo.Caffe.set_random_seed(hyper['random_seed'])
     apollo.Caffe.set_mode_gpu()
     apollo.Caffe.set_device(args.gpu)
-    apollo.Caffe.set_logging_verbosity(args.verbosity)
+    apollo.Caffe.set_logging_verbosity(args.loglevel)
 
     train()
     eval()
