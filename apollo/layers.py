@@ -158,6 +158,19 @@ class DummyData(Layer):
         self.p.dummy_data_param.height.append(shape[2])
         self.p.dummy_data_param.width.append(shape[3])
 
+class Eltwise(Layer):
+    def __init__(self, operation, **kwargs):
+        super(Eltwise, self).__init__(kwargs)
+        self.p.type = type(self).__name__
+        if operation == 'MAX':
+            self.p.eltwise_param.operation = caffe_pb2.EltwiseParameter.MAX
+        elif operation == 'SUM':
+            self.p.eltwise_param.operation = caffe_pb2.EltwiseParameter.SUM
+        elif operation == 'PROD':
+            self.p.eltwise_param.operation = caffe_pb2.EltwiseParameter.PROD
+        else:
+            raise ValueError('Unknown Eltwise operator')
+
 class EuclideanLoss(LossLayer):
     def __init__(self, **kwargs):
         super(EuclideanLoss, self).__init__(kwargs)
@@ -209,6 +222,11 @@ class Lstm(Layer):
             self.p.lstm_param.input_gate_weight_filler.CopyFrom(kwargs['weight_filler'].filler_param)
             self.p.lstm_param.forget_gate_weight_filler.CopyFrom(kwargs['weight_filler'].filler_param)
             self.p.lstm_param.output_gate_weight_filler.CopyFrom(kwargs['weight_filler'].filler_param)
+
+class L1Loss(LossLayer):
+    def __init__(self, **kwargs):
+        super(L1Loss, self).__init__(kwargs)
+        self.p.type = type(self).__name__
 
 class NumpyData(Layer):
     def __init__(self, data, **kwargs):
