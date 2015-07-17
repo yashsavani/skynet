@@ -54,10 +54,10 @@ def alexnet_layers():
             bias_filler=bias_filler1, num_output=4096),
         layers.ReLU(name="relu7", bottoms=["fc7"], tops=["fc7"]),
         layers.Dropout(name="drop7", bottoms=["fc7"], tops=["fc7"], dropout_ratio=0.5, phase='TRAIN'),
-        layers.InnerProduct(name="fc8", bottoms=["fc7"], param_lr_mults=[10.0, 20.0],
+        layers.InnerProduct(name="fc8", bottoms=["fc7"], param_lr_mults=[1.0, 2.0],
             param_decay_mults=conv_decay_mults,
             weight_filler=layers.Filler(type="gaussian", std=0.01),
-            bias_filler=bias_filler0, num_output=20),
+            bias_filler=bias_filler0, num_output=1000),
         layers.SoftmaxWithLoss(name="loss", bottoms=["fc8", "label"]),
     ]
 
