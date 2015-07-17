@@ -59,9 +59,7 @@ cdef extern from "caffe/apollonet.hpp" namespace "caffe":
     cdef cppclass ApolloNet[float]:
         ApolloNet()
         float ForwardLayer(string layer_param_string, string runtime_param_string) except +
-        void BackwardLayer(string layer_name)
-        void Update(float lr, float momentum, float decay_rate, float clip_gradients)
-        void UpdateParam(string param_name, float lr, float momentum, float decay_rate)
+        void BackwardLayer(string layer_name) except +
         void ResetForward()
         float DiffL2Norm()
         map[string, shared_ptr[Blob]]& tops()
@@ -71,7 +69,7 @@ cdef extern from "caffe/apollonet.hpp" namespace "caffe":
         map[string, float]& param_lr_mults()
         void set_phase_test()
         void set_phase_train()
-        void CopyTrainedLayersFrom(string trained_filename)
+        void CopyTrainedLayersFrom(string trained_filename) except +
         vector[string]& active_layer_names()
         set[string]& active_param_names()
 
