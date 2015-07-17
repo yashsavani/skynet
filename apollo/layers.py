@@ -141,6 +141,8 @@ class Data(Layer):
         self.p.data_param.source = source
         self.p.data_param.backend = DataParameter.LMDB
         self.p.data_param.batch_size = batch_size
+        if 'transform' in kwargs:
+            self.p.transform_param.CopyFrom(kwargs['transform'].transform_param)
 
 class Dropout(Layer):
     def __init__(self, dropout_ratio, **kwargs):
