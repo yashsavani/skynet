@@ -4,6 +4,7 @@ See ./examples/finetune_flickr_style/readme.txt for explanation
 
 import numpy as np
 import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
+import simplejson as json
 import logging
 import argparse
 import random
