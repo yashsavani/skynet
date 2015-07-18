@@ -68,31 +68,37 @@ Dtype ApolloNet<Dtype>::ForwardLayer(const string& layer_param_string, const str
       // layer is new, or it's list of bottoms has changed. Reset the bottom blobs
       bottom_blobs_[layer_name].clear();
       bottom_blob_names_[layer_name].clear();
-      for (int bottom_id = 0; bottom_id < active_layer_param.bottom_size(); ++bottom_id) {
-        const string& blob_name = active_layer_param.bottom(bottom_id);
-        bottom_blob_names_[layer_name].push_back(blob_name);
+      for (int i = 0; i < active_layer_param.bottom_size(); ++i) {
+        const string& blob_name = active_layer_param.bottom(i);
         shared_ptr<Blob<Dtype> > top_blob = tops_[blob_name];
+        bottom_blob_names_[layer_name].push_back(blob_name);
         shared_ptr<Blob<Dtype> > bottom_blob(new Blob<Dtype>(top_blob->shape()));
-        bottom_blob->ShareData(*top_blob);
-        if (layer->in_place_layer() || !layer->overwrites_bottom_diffs()) {
-          // if layer accumulates delta rather than overwriting, we can save memory
-          bottom_blob->ShareDiff(*top_blob);
-        }
         bottom_blobs_[layer_name].push_back(bottom_blob);
       }
       layer->reset_bottoms(bottom_blob_names_[layer_name]);
-    } else {
+    }
+
+    for (int i = 0; i < active_layer_param.bottom_size(); ++i) {
       // Reshape bottom_blobs to match their respective top blobs 
-      for (int bottom_id = 0; bottom_id < active_layer_param.bottom_size(); ++bottom_id) {
-        const string& blob_name = active_layer_param.bottom(bottom_id);
-        shared_ptr<Blob<Dtype> > top_blob = tops_[blob_name];
-        shared_ptr<Blob<Dtype> > bottom_blob = bottom_blobs_[layer_name][bottom_id];
-        bottom_blob->ReshapeLike(*top_blob);
+      const string& blob_name = active_layer_param.bottom(i);
+      shared_ptr<Blob<Dtype> > top_blob = tops_[blob_name];
+      shared_ptr<Blob<Dtype> > bottom_blob = bottom_blobs_[layer_name][i];
+
+      bottom_blob->ReshapeLike(*top_blob);
+      bottom_blob->ShareData(*top_blob);
+      if (layer->in_place_layer() || !layer->overwrites_bottom_diffs()) {
+        // if layer accumulates delta rather than overwriting, we can save memory
+        bottom_blob->ShareDiff(*top_blob);
       }
     }
 
     for (int bottom_id = 0; bottom_id < active_layer_param.bottom_size(); ++bottom_id) {
       bottom_vec.push_back(bottom_blobs_[layer_name][bottom_id].get());
+    }
+
+    ASSERT(layer->layer_param().top_size() == active_layer_param.top_size(), "top vec cannot change");
+    for (int top_id = 0; top_id < active_layer_param.top_size(); ++top_id) {
+      ASSERT(layer->layer_param().top(top_id) == active_layer_param.top(top_id), "top vec cannot change");
     }
 
     for (int top_id = 0; top_id < active_layer_param.top_size(); ++top_id) {

@@ -20,6 +20,7 @@ void Tensor<Dtype>::Reshape(const vector<int>& shape) {
     shape_[i] = shape[i];
   }
   if (count_ > capacity_) {
+    // WARNING: Other tensors sharing data must be shared again.
     capacity_ = count_;
     mem_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
   }
