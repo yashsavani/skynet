@@ -7,6 +7,7 @@
 #include "caffe/syncedmem.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/vision_layers.hpp"
+#include "caffe/layers/dropout_layer.hpp"
 
 namespace caffe {
 

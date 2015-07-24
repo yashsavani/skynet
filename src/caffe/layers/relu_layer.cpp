@@ -3,6 +3,7 @@
 
 #include "caffe/layer.hpp"
 #include "caffe/vision_layers.hpp"
+#include "caffe/layers/relu_layer.hpp"
 
 namespace caffe {
 

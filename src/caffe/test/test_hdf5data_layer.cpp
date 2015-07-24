@@ -10,6 +10,7 @@
 #include "caffe/vision_layers.hpp"
 
 #include "caffe/test/test_caffe_main.hpp"
+#include "caffe/layers/hdf5_data_layer.hpp"
 
 namespace caffe {
 

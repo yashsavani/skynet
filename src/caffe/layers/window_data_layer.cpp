@@ -18,6 +18,7 @@
 #include "caffe/util/io.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/rng.hpp"
+#include "caffe/layers/window_data_layer.hpp"
 
 // caffe.proto > LayerParameter > WindowDataParameter
 //   'source' field specifies the window_file

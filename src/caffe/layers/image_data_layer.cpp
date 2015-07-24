@@ -12,6 +12,7 @@
 #include "caffe/util/io.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/rng.hpp"
+#include "caffe/layers/image_data_layer.hpp"
 
 namespace caffe {
 

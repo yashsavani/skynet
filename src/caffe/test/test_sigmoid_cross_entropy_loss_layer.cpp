@@ -12,6 +12,7 @@
 
 #include "caffe/test/test_caffe_main.hpp"
 #include "caffe/test/test_gradient_check_util.hpp"
+#include "caffe/layers/sigmoid_cross_entropy_loss_layer.hpp"
 
 namespace caffe {
 

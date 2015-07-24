@@ -10,6 +10,8 @@
 
 #include "caffe/test/test_caffe_main.hpp"
 #include "caffe/test/test_gradient_check_util.hpp"
+#include "caffe/layers/dropout_layer.hpp"
+#include "caffe/layers/pooling_layer.hpp"
 
 namespace caffe {
 

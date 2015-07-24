@@ -13,6 +13,16 @@
 #include "caffe/test/test_caffe_main.hpp"
 #include "caffe/test/test_gradient_check_util.hpp"
 
+#include "caffe/layers/dropout_layer.hpp"
+#include "caffe/layers/log_layer.hpp"
+#include "caffe/layers/exp_layer.hpp"
+#include "caffe/layers/absval_layer.hpp"
+#include "caffe/layers/sigmoid_layer.hpp"
+#include "caffe/layers/tanh_layer.hpp"
+#include "caffe/layers/bnll_layer.hpp"
+#include "caffe/layers/prelu_layer.hpp"
+#include "caffe/layers/inner_product_layer.hpp"
+
 namespace caffe {
 
 template <typename TypeParam>

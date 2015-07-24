@@ -5,6 +5,7 @@
 #include "caffe/data_layers.hpp"
 #include "caffe/layer.hpp"
 #include "caffe/util/io.hpp"
+#include "caffe/layers/memory_data_layer.hpp"
 
 namespace caffe {
 

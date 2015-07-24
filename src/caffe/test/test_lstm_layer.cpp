@@ -11,6 +11,7 @@
 
 #include "caffe/test/test_caffe_main.hpp"
 #include "caffe/test/test_gradient_check_util.hpp"
+#include "caffe/layers/lstm_layer.hpp"
 
 #define NUM_CELLS 3
 #define BATCH_SIZE 4

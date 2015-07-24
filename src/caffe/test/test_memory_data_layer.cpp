@@ -7,6 +7,7 @@
 #include "caffe/filler.hpp"
 
 #include "caffe/test/test_caffe_main.hpp"
+#include "caffe/layers/memory_data_layer.hpp"
 
 namespace caffe {
 

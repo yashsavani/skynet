@@ -12,6 +12,7 @@
 #include "caffe/vision_layers.hpp"
 
 #include "caffe/test/test_caffe_main.hpp"
+#include "caffe/layers/image_data_layer.hpp"
 
 namespace caffe {
 
