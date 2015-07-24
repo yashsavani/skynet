@@ -142,7 +142,10 @@ def eval_performance(net):
     print ''.join([chr(x) for x in output_words])
 
 def softmax_choice(data):
-    return np.random.choice(range(len(data.flatten())), p=data.flatten())
+    try:
+        return np.random.choice(range(len(data.flatten())), p=data.flatten())
+    except:
+        return np.argmax(data.flatten())
 
 def eval_forward(net):
     output_words = []
