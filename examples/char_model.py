@@ -49,14 +49,10 @@ apollo.Caffe.set_mode_gpu()
 apollo.Caffe.set_device(0)
 apollo.Caffe.set_logging_verbosity(3)
 
-with open('%s/data/language_model/vocab.pkl' % apollo_root, 'r') as f:
-    vocab = pickle.load(f)
-ivocab = {v: k for k, v in vocab.items()}
-
 def get_data():
     data_source = '%s/data/char_model/reddit_ml.txt' % apollo_root
     if not os.path.exists(data_source):
-        raise IOError('You must download the data with ./data/character_model/get_reddit_lm.sh')
+        raise IOError('You must download the data with ./data/char_model/get_char.sh')
     epoch = 0
     while True:
         with open(data_source, 'r') as f:
