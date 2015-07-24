@@ -1,26 +1,18 @@
-COPYRIGHT
+In addition to the Apollo BSD license below, Apollo also includes the BSD
+licenses found in
 
-Apollo follows the licensing terms of the Caffe license.
+    ./licenses/CAFFE_LICENCE
+    ./licenses/STANFORD_LICENSE
 
-By contributing to the Apollo repository through pull-request, comment,
-or otherwise, the contributor releases their content to the
-license and copyright terms herein.
-
-Caffe License
 --------------------------------------------------------------------------
-
 COPYRIGHT
 
-All contributions by the University of California:
-Copyright (c) 2014, The Regents of the University of California (Regents)
+All contributions:
+Copyright (c) 2015, the respective contributors
 All rights reserved.
 
-All other contributions:
-Copyright (c) 2014, the respective contributors
-All rights reserved.
-
-Caffe uses a shared copyright model: each contributor holds copyright over
-their contributions to Caffe. The project versioning records all such
+Apollo uses a shared copyright model: each contributor holds copyright over
+their contributions to Apollo. The project versioning records all such
 contribution and copyright details. If a contributor wants to further mark
 their specific copyright on a particular contribution, they should indicate
 their copyright solely in the commit message of the change when it is
@@ -50,6 +42,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 CONTRIBUTION AGREEMENT
 
-By contributing to the BVLC/caffe repository through pull-request, comment,
+By contributing to the Russell91/apollo repository through pull-request, comment,
 or otherwise, the contributor releases their content to the
 license and copyright terms herein.
