@@ -8,6 +8,7 @@ from cython.operator cimport postincrement, dereference
 from definitions cimport Tensor as CTensor, Blob as CBlob, Layer as CLayer, shared_ptr, LayerParameter, ApolloNet
 
 import numpy as pynp
+import utils.draw
 import h5py
 import os
 import caffe_pb2
@@ -257,7 +258,11 @@ cdef class Net:
             layer = param.layer.add()
             layer.CopyFrom(layers[layer_name].layer_param())
         return param
-
+    def draw_to_file(self, filename, rankdir='LR', require_nonempty=True):
+        net_param = self.net_param()
+        if len(net_param.layer) == 0 and require_nonempty:
+            raise ValueError('Cowardly refusing to draw net with no active layers. HINT: call this function before reset_forward()')
+        utils.draw.draw_net_to_file(self.net_param(), filename, rankdir)
     property layers:
         def __get__(self):
             cdef map[string, shared_ptr[CLayer]] layers_map

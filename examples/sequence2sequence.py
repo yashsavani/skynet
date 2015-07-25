@@ -178,6 +178,7 @@ sentences = get_data()
 sentence_batches = get_data_batch(sentences)
 
 forward(net, sentence_batches)
+net.draw_to_file('/tmp/s2s.png')
 net.reset_forward()
 train_loss_hist = []
 
