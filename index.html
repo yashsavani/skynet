@@ -127,7 +127,7 @@ export PYTHONPATH=$PYTHONPATH:$APOLLO_ROOT:$APOLLO_ROOT/python/caffe/proto</code
             Finally, compile the library with
             </p>
             <pre><code>cp Makefile.config.example Makefile.config
-make apollo -j8
+make -j8
 make test -j8
 make runtest</code></pre>
         <p>
@@ -467,31 +467,38 @@ def get_hyper():
             <pre><code>./apollo/legacy.py --solver ./examples/mnist/lenet_solver.py --gpu 0 --weights ./examples/mnist/lenet_iter_10000.caffemodel</pre></code>
         </div>
         <div id="More_Examples" class="subgroup">
+                    <div id="More_Examples" class="subgroup">
             <h4>More Examples</h4>
-                <ul>
-                    <li>
-                        <a href="https://github.com/Russell91/apollo/blob/master/apollo/models/alexnet.py" target="_blank">AlexNet</a> and
-                        <a href="https://github.com/Russell91/apollo/blob/master/apollo/models/googlenet.py" target="_blank">GoogLeNet</a> model files
-                    </li>
-                    <li>
-                        <a href="https://github.com/Russell91/apollo/blob/master/examples/finetune_flickr_style/train.py" target="_blank">Finetuning AlexNet on Flickr</a>
-                    </li>
-                    <li> <a href="https://github.com/cloudtoad/mlstuff/blob/master/simply.py" target="_blank">Adding numbers with Conv nets</a> </li>
-                    <li> <a href="http://github.com/Russell91/apollo/blob/master/examples/language_model.ipynb" target="_blank">Natural language model</a>
-                        , which replicates the results of
-                        <a href="http://github.com/Russell91/nlpcaffe" target="_blank">NLP-Caffe</a>
-                    </li>
-                    <li> <a href="http://github.com/Russell91/apollo/blob/master/examples/char_model.py" target="_blank">Character level language model</a> trained on /r/MachineLearning, in the spirit of Karpathy's
-                        <a href="https://github.com/karpathy/char-rnn" target="_blank">char-rnn</a>
-                    </li>
-                    <li> <a href="http://github.com/Russell91/apollo/blob/master/examples/sequence2sequence.py" target="_blank">Sequence2sequence</a>,
-                    which trains a network to reverse sentences on the Language Model dataset. Thanks to <a href="http://stanford.edu/~lmthang/">Thang Luong</a> for helpful discussions.
-                    </li>
-                    <li> 
-                        If you use Apollo and put together an example, let us know and we'll link to your content
-                    </li>
-                </ul>
-                If you have any issues installing or using any of the examples, please feel free to submit a github issue.
+            <ul>
+                <li>
+                    <a href="https://github.com/Russell91/apollo/blob/master/apollo/models/alexnet.py" target="_blank">AlexNet</a> and
+                    <a href="https://github.com/Russell91/apollo/blob/master/apollo/models/googlenet.py" target="_blank">GoogLeNet</a> model files
+                </li>
+                <li>
+                    <a href="https://github.com/Russell91/apollo/blob/master/examples/imagenet/train_alexnet.py" target="_blank">AlexNet training on Imagenet</a>
+                </li>
+                <li>
+                    <a href="https://github.com/Russell91/apollo/blob/master/examples/finetune_flickr_style/train.py" target="_blank">AlexNet finetuning on Flickr</a>
+                </li>
+                <li> <a href="https://github.com/cloudtoad/mlstuff/blob/master/simply.py" target="_blank">Adding numbers with Conv nets</a> </li>
+                <li> <a href="http://github.com/Russell91/apollo/blob/master/examples/language_model.ipynb" target="_blank">Natural language model</a>
+                    , which replicates the results of
+                    <a href="http://github.com/Russell91/nlpcaffe" target="_blank">NLP-Caffe</a>
+                </li>
+                <li> <a href="http://github.com/Russell91/apollo/blob/master/examples/char_model.py" target="_blank">Character level language model</a> trained on /r/MachineLearning, in the spirit of Karpathy's
+                    <a href="https://github.com/karpathy/char-rnn" target="_blank">char-rnn</a>
+                </li>
+                <li> <a href="http://github.com/Russell91/apollo/blob/master/examples/sequence2sequence.py" target="_blank">Sequence2sequence</a>,
+                which trains a network to reverse sentences on the Language Model dataset.
+                </li>
+                <li> <a href="http://github.com/Russell91/apollo/blob/master/examples/machine_translation.py" target="_blank">Machine Translation</a>,
+                which translates Spanish to English. 
+                Thanks to <a href="http://stanford.edu/~lmthang/">Thang Luong</a> for helpful discussions.
+                <li> 
+                    If you use Apollo and put together an example, let us know and we'll link to your content
+                </li>
+            </ul>
+            If you have any issues installing or using any of the examples, please feel free to submit a github issue.
         </div>
     </section>
     <section id="Acknowledgements" class="group">
