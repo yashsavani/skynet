@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link href="static/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="static/css/apollo.css" rel="stylesheet">
+    <script src="http://code.jquery.com/jquery-latest.js"></script>
+    <script src="static/js/bootstrap.min.js"></script>
+    <script type="text/javascript"
+      src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+    </script>
+    <link rel="shortcut icon" href="static/img/monogramDM.jpg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome</title>
+    <script>
+      $(document).ready(function() {
+        $('.nav a[href="' + this.location.pathname + '"]').parent().addClass('active');
+      });
+    </script>
+  </head>
+  <body>
+    <div class="full">
+      <div class="container">
+        <div class="row">
+          <!--<div class="col-xs-1"> </div>-->
+          <nav class="col-xs-2 bs-docs-sidebar hidden-print">
+            <div class="fixed">
+                <ul class="nav nav-stacked fixed" id="sidebar">
+                    <li>
+                        <a href="#About">About</a>
+                    </li>
+                    <li>
+                        <a href="#Installation">Installation</a>
+                        <!--<ul class="nav nav-stacked">-->
+                            <!--<li><a href="#Prerequisites">Prerequisites</a></li>-->
+                            <!--<li><a href="#Compling">Compiling</a></li>-->
+                        <!--</ul>-->
+                    </li>
+                    <!-- Same for Group B & C -->
+                    <li>
+                        <a href="#Examples">Examples</a>
+                        <ul class="nav nav-stacked">
+                            <li><a href="#Getting_Started">Getting Started</a></li>
+                            <li><a href="#LSTM">LSTM</a></li>
+                            <li><a href="#Mnist">Mnist</a></li>
+                            <li><a href="#More_Examples">AlexNet</a></li>
+                            <li><a href="#More_Examples">GoogLeNet</a></li>
+                            <li><a href="#More_Examples">Char-RNN</a></li>
+                            <li><a href="#More_Examples">Sequence2Sequence</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <a href="#Acknowledgements">Acknowledgements</a>
+                    </li>
+                </ul>
+            </div>
+          </nav>
+
+<div class="col-sm-9 col-xs-12">
+    <section id="About" class="group">
+        <h2>About</h2>
+        <p>
+        Apollo is a BSD licensed <a href="http://github.com/Russell91/apollo">open source</a> deep learning codebase attempting to provide the functionality of 
+        <a href="http://torch.ch/">Torch</a> in python.
+        It makes heavy use of code from <a href="http://caffe.berkeleyvision.org/">Caffe</a>.
+        The core of the library is a CPU/GPU matrix tensor class designed for use in python.
+        In addition, Apollo provides a new API for constructing and training a generic class of models including
+        recurrent and recursive neural networks.
+        <br/>
+        <br/>
+        We make several key changes to Caffe while supporting
+        the existing code and semantics of layers, architecture files, and stored parameters. 
+        While Caffe does already provide a well-written python
+        interface, Apollo make a more agressive attempt to construct a fully featured python library by:
+        </p>
+        <ol type="1">
+            <li> Creating python idioms for training neural nets, in addition to evaluating them.</i>
+            <li> Adding an optional set of python classes for generating protocol buffers on the fly from python code.</li>
+            <li> Replacing Caffe's Net and Solver with a new ApolloNet class providing principled support for recurrent and recursive nets.</li>
+            <li> Replacing the protobuf weight storage with the more numpy accessible HDF5 format, expanding the 2GB size limit and avoiding duplication of shared parameters. </li>
+            <li> Performing all parameter updates in pure python using GPU operations.</li>
+            <li> Replacing kernel-crashing glog CHECK macros with macros that bubble up exceptions into python.</li>
+            <li> Providing access to efficient GPU operations by exposing the new Tensor class to python.</li>
+        </ol>
+    </section>
+    <section id="Installation" class="group">
+        <h2>Installation</h2>
+        <div id="Prerequesites" class="subgroup">
+            <h4>Prerequisites</h4>
+            <p>
+                Apollo shares many dependencies with Caffe. Required dependencies include
+                <ul>
+                    <li>OpenCV</li>
+                    <li>Boost</li>
+                    <li>Cuda</li>
+                    <li>BLAS</li>
+                    <li>protobuf</li>
+                    <li>glog</li>
+                    <li>gflags</li>
+                    <li>HDF5</li>
+                </ul>
+                You can follow the Caffe instructions for installing dependencies on
+                <a href="http://caffe.berkeleyvision.org/install_apt.html" target="_blank">Ubuntu</a>,
+                <a href="http://caffe.berkeleyvision.org/install_yum.html" target="_blank">RHEL / CentOS / Fedora</a>,
+                or <a href="http://caffe.berkeleyvision.org/install_osx.html" target="_blank">OS X</a>.
+            </p>
+        </div>
+        <div id="Compiling" class="subgroup">
+            <h4>Compiling</h4>
+            <p>
+            Clone the repository
+            </p>
+            <pre><code>git clone http://github.com/Russell91/apollo.git && cd apollo</code></pre>
+
+            <p>
+            Install the python dependencies
+            </p>
+            <pre><code>for req in $(cat requirements.txt); do pip install $req; done</code></pre>
+
+            <p>
+            Set up your LD_LIBRARY_PATH and PYTHON_PATH
+            </p>
+            <pre><code>export APOLLO_ROOT=/path/to/apollo
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$APOLLO_ROOT/build/lib # contains libcaffe.so
+export PYTHONPATH=$PYTHONPATH:$APOLLO_ROOT:$APOLLO_ROOT/python/caffe/proto</code></pre>
+
+            <p>
+            Finally, compile the library with
+            </p>
+            <pre><code>cp Makefile.config.example Makefile.config
+make apollo -j8
+make test -j8
+make runtest</code></pre>
+        <p>
+        The Makefile.config works the same way as in Caffe, so you can cp your old Makefile.config if you've
+        compiled Caffe previously.
+        
+        </p>
+        </div>
+    </section>
+    <section id="Examples" class="group">
+        <h2>Examples</h2>
+        <div id="Getting_Started" class="subgroup">
+            <h4>Getting Started</h4>
+            <p> Apollo allows you to train the entire network from python.
+                The following network generates random numbers on the fly and learns to multiply them by 3. </p>
+            <pre><code># /path/to/apollo/examples/simple.py
+import apollo
+from apollo import layers
+import numpy as np
+
+net = apollo.Net()
+for i in range(1000):
+    example = np.array(np.random.random()).reshape((1, 1, 1, 1))
+    net.forward_layer(layers.NumpyData(name='data', data=example))
+    net.forward_layer(layers.NumpyData(name='label', data=(example*3)))
+    net.forward_layer(layers.Convolution(name='conv', kernel_size=1,
+        bottoms=['data'], num_output=1))
+    loss = net.forward_layer(layers.EuclideanLoss(name='loss',
+        bottoms=['conv', 'label']))
+    net.backward()
+    net.update(lr=0.1)
+    if i % 100 == 0:
+        print loss</code></pre>
+            <p>
+            The network learns for a total of 1000 iterations. Python classes such as Convolution and EuclideanLoss are used to create
+            <a href="https://developers.google.com/protocol-buffers/docs/overview" target="_blank">protocol buffers</a>,
+            which instruct the C++ backend on what computations to run. After initializing the layer classes with the appropriate arguments 
+            the protobuf LayerParameter can be found in the "class.p" attribute. You can even see or modify these LayerParameters directly:
+            <!--The layer classes are defined in <a href="https://github.com/Russell91/apollo/blob/master/apollo/layers.py" target="_blank">apollo/layers.py</a>,-->
+            <pre><code>print apollo.layers.Convolution(name='conv', kernel_size=1, bottoms=['data'], num_output=1).p                 
+
+name: "conv"
+type: "Convolution"
+bottom: "data"
+top: "conv"
+convolution_param {
+    num_output: 1
+    kernel_size: 1
+}</code></pre>
+            There are a few design choices to
+            be aware of when using forward_layer(). During any single iteration of training, every layer must have a unique name. If the network encounters a name it has never seen
+            before, it uses the LayerParameter to construct a new layer, which is cached for future iterations. If the network has already seen a layer with that name, it loads
+            the class from this dictionary rather than reallocating. Thus, the LayerParameter is essentially ignored on subsequent passes.
+            <br/>
+            <br/>
+            The only exception to this rule is the list
+            of bottoms, which is allowed to change dynamically during training. Because one sometimes wants to communicate new data from python to C++ on
+            every iteration, Apollo also supports a protobuf RuntimeParameter. The NumpyData class is an example of where this might be used. It sends down a new chunk of data every
+            time it is called.
+            <br/>
+            <br/>
+            The simple network above also utilizes the high level backward() and update() functions. Each provides an abstraction over the net's backward_layer() and update_param() functions,
+            which operate on individual layers and parameters, respectively. When it is finished updating all the parameters, the update()
+            function calls reset_forward(), which clears the memory of active layers and parameters for the next forward pass.
+            The update() function supports momentum, weight decay, and gradient clipping. Fancier techniques
+            such as AdaGrad, AdaDelta, and RMSProp can be written in pure python, but are not yet implemented.
+            </p>
+        </div>
+
+        <div id="LSTM" class="subgroup">
+            <h4>LSTM</h4>
+            <p> With the basics laid out, let's see a more complicated example that showcases some of Apollo's strengths.
+            We'll construct an LSTM network that learns to sum up a variable length sequence of 5-15 inputs distributed uniformly in [0,1].
+            For the impatient, the full code is available in <a href="https://github.com/Russell91/apollo/blob/master/examples/summation.py" target="_blank">examples/summation.py</a>.
+            Best practices dictate that we separate out the hyperparameters into a separate function that doesn't mingle with the rest of the code:
+            </p>
+            <pre><code># /path/to/apollo/examples/summation.py
+import logging
+import numpy as np
+import random
+import argparse
+import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
+
+import apollo
+from apollo import layers
+
+def get_hyper():
+    hyper = {}
+    hyper['batch_size'] = 32
+    hyper['init_range'] = 0.1
+    hyper['base_lr'] = 0.03
+    hyper['weight_decay'] = 0
+    hyper['momentum'] = 0.9
+    hyper['clip_gradients'] = 0.1
+    hyper['display_interval'] = 100
+    hyper['max_iter'] = 5001
+    hyper['snapshot_prefix'] = '/tmp/summation'
+    hyper['snapshot_interval'] = 1000
+    hyper['random_seed'] = 22
+    hyper['gamma'] = 0.5
+    hyper['stepsize'] = 1000
+    hyper['solver_mode'] = 'gpu'
+    hyper['mem_cells'] = 1000
+    hyper['graph_interval'] = 1000
+    hyper['graph_prefix'] = ''
+    return hyper
+
+hyper = get_hyper()</code></pre>
+<p>
+Next, we'll define the forward pass of the network in it's own function.
+</p>
+
+<pre><code>def forward(net):
+    length = random.randrange(5, 15)
+
+    # initialize all weights in [-0.1, 0.1]
+    filler = layers.Filler(type='uniform', min=-hyper['init_range'],
+        max=hyper['init_range'])
+    # initialize the LSTM memory with all 0's
+    net.forward_layer(layers.NumpyData(name='lstm_seed',
+        data=np.zeros((hyper['batch_size'], hyper['mem_cells'], 1, 1))))
+    accum = np.zeros((hyper['batch_size'],))
+
+    # Begin recurrence through 5 - 15 inputs
+    for step in range(length):
+        # Set up the value blob
+        net.forward_layer(layers.DummyData(name='value%d' % step,
+            shape=[hyper['batch_size'], 1, 1, 1]))
+        value = np.array([random.random() for _ in range(hyper['batch_size'])])
+        accum += value
+        # Set data of value blob to contain a batch of random numbers
+        net.tops['value%d' % step].data[:, 0, 0, 0] = value
+        if step == 0:
+            prev_hidden = 'lstm_seed'
+            prev_mem = 'lstm_seed'
+        else:
+            prev_hidden = 'lstm%d_hidden' % (step - 1)
+            prev_mem = 'lstm%d_mem' % (step - 1)
+        # Concatenate the hidden output with the next input value 
+        net.forward_layer(layers.Concat(name='lstm_concat%d' % step,
+            bottoms=[prev_hidden, 'value%d' % step]))
+        # Run the LSTM for one more step
+        net.forward_layer(layers.Lstm(name='lstm%d' % step,
+            bottoms=['lstm_concat%d' % step, prev_mem],
+            param_names=['input_value', 'input_gate', 'forget_gate', 'output_gate'],
+            tops=['lstm%d_hidden' % step, 'lstm%d_mem' % step],
+            num_cells=hyper['mem_cells'], weight_filler=filler))
+
+    # Add a fully connected layer with a bottom blob set to be the last used LSTM cell
+    # Note that the InnerProduct bottom is now a function of the data
+    net.forward_layer(layers.InnerProduct(name='ip',
+        bottoms=['lstm%d_hidden' % (length - 1)],
+        num_output=1, weight_filler=filler))
+    # Add a label for the sum of the inputs 
+    net.forward_layer(layers.NumpyData(name='label',
+        data=np.reshape(accum, (hyper['batch_size'], 1, 1, 1))))
+    # Compute the Euclidean loss between the preiction and label, used for backprop
+    loss = net.forward_layer(layers.EuclideanLoss(name='euclidean',
+        bottoms=['ip', 'label']))
+    return loss</code></pre>
+<p>
+On each forward pass, we first randomly determine the length of the network. At each step,
+a new LSTM block outputs two tops - one for the hidden state and one for the memory.
+Subsequent LSTM blocks concatenates the hidden output with the new random value.
+When the network is finished unrolling, we add an InnerProduct layer to calculate the sum from the final LSTM unit,
+and train with a EuclideanLoss layer comparing this value to the accumulated sum calculated in python.
+<br/>
+<br/>
+Next we'll set up the training loop as before. But this time, we'll add a few bells and whistles
+like network snapshots to HDF5 files, automatic plotting of the training loss, and better logging.
+</p>
+<pre><code>def train():
+    net = apollo.Net()
+    train_loss_hist = []
+
+    for i in range(hyper['max_iter']):
+        train_loss_hist.append(forward(net))
+        net.backward()
+        lr = (hyper['base_lr'] * (hyper['gamma'])**(i // hyper['stepsize']))
+        net.update(lr=lr, momentum=hyper['momentum'],
+            clip_gradients=hyper['clip_gradients'], weight_decay=hyper['weight_decay'])
+        if i % hyper['display_interval'] == 0:
+            logging.info('Iteration %d: %s' %
+                (i, np.mean(train_loss_hist[-hyper['display_interval']:])))
+        if (i % hyper['snapshot_interval'] == 0 and i > 0) or i == hyper['max_iter'] - 1:
+            filename = '%s_%d.h5' % (hyper['snapshot_prefix'], i)
+            logging.info('Saving net to: %s' % filename)
+            net.save(filename)
+        if i % hyper['graph_interval'] == 0 and i > 0:
+            sub = 100
+            plt.plot(np.convolve(train_loss_hist, np.ones(sub)/sub)[sub:-sub])
+            plt.savefig('%strain_loss.jpg' % hyper['graph_prefix'])</code></pre>
+<p>
+After we're done training, we'll want to evaluate the network's performance. To keep things interesting,
+we'll see if the network is able to <i>generalise</i> to sequences of longer length than it was trained on. We
+set the recurrent length to 20 numbers, all having value 0.5. Hopefully the network will output 10!
+</p>
+<pre><code>def evaluate_forward(net):
+    length = 20
+    net.forward_layer(layers.NumpyData(name='prev_hidden',
+        data=np.zeros((1, hyper['mem_cells'], 1, 1))))
+    net.forward_layer(layers.NumpyData(name='prev_mem',
+        data=np.zeros((1, hyper['mem_cells'], 1, 1))))
+    filler = layers.Filler(type='uniform', min=-hyper['init_range'], max=hyper['init_range'])
+    accum = np.array([0.])
+    predictions = []
+    for step in range(length):
+        value = 0.5
+        net.forward_layer(layers.NumpyData(name='value',
+            data=np.array(value).reshape((1, 1, 1, 1))))
+        accum += value
+        prev_hidden = 'prev_hidden'
+        prev_mem = 'prev_mem'
+        net.forward_layer(layers.Concat(name='lstm_concat', bottoms=[prev_hidden, 'value']))
+        net.forward_layer(layers.Lstm(name='lstm', bottoms=['lstm_concat', prev_mem],
+            param_names=['input_value', 'input_gate', 'forget_gate', 'output_gate'],
+            weight_filler=filler,
+            tops=['next_hidden', 'next_mem'], num_cells=hyper['mem_cells']))
+        net.forward_layer(layers.InnerProduct(name='ip', bottoms=['next_hidden'],
+            num_output=1))
+        predictions.append(float(net.tops['ip'].data.flatten()[0]))
+        # set up for next prediction by copying LSTM outputs back to inputs
+        net.tops['prev_hidden'].data_tensor.copy_from(net.tops['next_hidden'].data_tensor)
+        net.tops['prev_mem'].data_tensor.copy_from(net.tops['next_mem'].data_tensor)
+        net.reset_forward()
+    return predictions</code></pre>
+    <p>
+    We'll use a distinct net for evaluation. First, we seed the LSTM with 0's as before, but this time
+    we copy the hidden state and memory output of the LSTM block back to it's input at each iteration.
+    So far, when accessing blob data, we've used the .data property, which copies the data
+    to the cpu and returns a numpy array referencing the data. This is quite convenient, as numpy is more
+    fully featured and familiar than the Tensor library. But in this case, we don't want to pay the overhead
+    of transferring data back and forth from the CPU to the GPU.
+    Instead, we use the .data_tensor property, which returns a reference to the underlying tensor. We can then
+    copy the data from the 'next_hidden' top to the 'prev_hidden' top directly on the GPU!
+    <br/>
+    <br/>
+    Now we are finally ready to run the network. We define the main() and eval() functions as:
+    </p>
+    <pre><code>def eval():
+    eval_net = apollo.Net()
+    # evaluate the net once to set up structure before loading parameters
+    evaluate_forward(eval_net)
+    eval_net.load('%s_%d.h5' % (hyper['snapshot_prefix'], hyper['max_iter'] - 1))
+    print evaluate_forward(eval_net)
+    
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--gpu', default=0, type=int)
+    parser.add_argument('--loglevel', default=3, type=int)
+    args = parser.parse_args()
+    random.seed(0)
+    apollo.Caffe.set_random_seed(hyper['random_seed'])
+    apollo.Caffe.set_mode_gpu()
+    apollo.Caffe.set_device(args.gpu)
+    apollo.Caffe.set_logging_verbosity(args.verbosity)
+
+    train()
+    eval()
+
+if __name__ == '__main__':
+    main()</pre></code>
+    <p>
+    and run the code with:
+    </p>
+            <pre><code>python examples/summation.py --gpu 0
+</code></pre>
+    <p>
+    The output is: <br/>
+    [0.5915, 1.069, 1.548, 2.029, 2.513,<br/>
+    3.0016, 3.493, 3.989, 4.490, 4.996,<br/>
+    5.5045, 6.012, 6.518, 7.016, 7.503,<br/>
+    7.9752, 8.427, 8.855, 9.258, 9.632]<br/>
+    </p>
+    <p>
+    Recall that the network was trained on input sequencies ranging from 5 to 15 values long.
+    After receiving 15 input values of 0.5, the network predicts a sum of 7.503. The cumulative error is only 0.03.
+    Notably, the error is greater during the first 5 inputs.
+    After 20 steps,
+    the error is 0.37, but the network has achieved some level of generalization. If you run the code yourself,
+    you can see what happens at even greater length (hint: things get worse).
+        </div>
+        <div id="Mnist" class="subgroup">
+            <h4>Mnist</h4>
+            <p>
+            As the LSTM summation example above demonstrated, Apollo makes it possible to define a neural net architecture on the
+            fly with a structure that varies depending on the input. But if you plan on just using a static network architecture,
+            mixing the definition and usage isn't really necessary. Fortunately, Apollo is set up for this use case, and supports
+            running the exact same model.prototxt files that Caffe uses. Let's see an example by running Lenet on the Mnist data set.
+            You can find the original tutorial <a href="http://caffe.berkeleyvision.org/gathered/examples/mnist.html" target="blank">here</a>,
+            but we'll cover just the parts you need to get it running in Apollo.
+            </p>
+            <p>
+            First, download the dataset and create the lmdb database
+            </p>
+            <pre><code>cd $APOLLO_ROOT
+./data/mnist/get_mnist.sh
+./examples/mnist/create_mnist.sh</code></pre>
+            <p>
+            This step will have created ./examples/mnist/mnist_train_lmdb and ./examples/mnist/mnist_test_lmdb. To run the network,
+            we'll need to create a python file from the original ./examples/mnist/lenet_solver.prototxt that will specify the hyperparameters
+            and the location of the network architecture file. The new file looks like this:
+            </p>
+            <pre><code># ./examples/mnist/lenet_solver.py
+
+def get_hyper():
+    param = {}
+    # The train/test net protocol buffer definition
+    param['net_prototxt'] = "examples/mnist/lenet_train_test.prototxt"
+    # test_iter specifies how many forward passes the test should carry out.
+    # In the case of MNIST, we have test batch size 100 and 100 test iterations,
+    # covering the full 10,000 testing images.
+    param['test_iter'] = 100
+    # Carry out testing every 500 training iterations.
+    param['test_interval'] = 500
+    # The base learning rate, momentum and the weight decay of the network.
+    param['base_lr'] = 0.01
+    param['momentum'] = 0.9
+    param['weight_decay'] = 0.0005
+    param['gamma'] = 1.0
+    param['stepsize'] = 10000
+    # Display every 100 iterations
+    param['display_interval'] = 100
+    # The maximum number of iterations
+    param['max_iter'] = 10000
+    # snapshot intermediate results
+    param['snapshot_interval'] = 5000
+    param['snapshot_prefix'] = "/tmp"
+    return param</code></pre>
+            <p>
+            Note the reference to the original examples/mnist/lenet_train_test.prototxt architecture. We can now run this example with
+            </p>
+            <pre><code>./apollo/legacy.py --solver ./examples/mnist/lenet_solver.py --gpu 0</pre></code>
+            <p>
+            If we additionally wanted to preload the pretrained Caffe Mnist weights after 10000 iterations, we could use
+            </p>
+            <pre><code>./apollo/legacy.py --solver ./examples/mnist/lenet_solver.py --gpu 0 --weights ./examples/mnist/lenet_iter_10000.caffemodel</pre></code>
+        </div>
+        <div id="More_Examples" class="subgroup">
+            <h4>More Examples</h4>
+                <ul>
+                    <li>
+                        <a href="https://github.com/Russell91/apollo/blob/master/apollo/models/alexnet.py" target="_blank">AlexNet</a> and
+                        <a href="https://github.com/Russell91/apollo/blob/master/apollo/models/googlenet.py" target="_blank">GoogLeNet</a> model files
+                    </li>
+                    <li>
+                        <a href="https://github.com/Russell91/apollo/blob/master/examples/finetune_flickr_style/train.py" target="_blank">Finetuning AlexNet on Flickr</a>
+                    </li>
+                    <li> <a href="https://github.com/cloudtoad/mlstuff/blob/master/simply.py" target="_blank">Adding numbers with Conv nets</a> </li>
+                    <li> <a href="http://github.com/Russell91/apollo/blob/master/examples/language_model.ipynb" target="_blank">Natural language model</a>
+                        , which replicates the results of
+                        <a href="http://github.com/Russell91/nlpcaffe" target="_blank">NLP-Caffe</a>
+                    </li>
+                    <li> <a href="http://github.com/Russell91/apollo/blob/master/examples/char_model.py" target="_blank">Character level language model</a> trained on /r/MachineLearning, in the spirit of Karpathy's
+                        <a href="https://github.com/karpathy/char-rnn" target="_blank">char-rnn</a>
+                    </li>
+                    <li> <a href="http://github.com/Russell91/apollo/blob/master/examples/sequence2sequence.py" target="_blank">Sequence2sequence</a>,
+                    which trains a network to reverse sentences on the Language Model dataset. Thanks to <a href="http://stanford.edu/~lmthang/">Thang Luong</a> for helpful discussions.
+                    </li>
+                    <li> 
+                        If you use Apollo and put together an example, let us know and we'll link to your content
+                    </li>
+                </ul>
+                If you have any issues installing or using any of the examples, please feel free to submit a github issue.
+        </div>
+    </section>
+    <section id="Acknowledgements" class="group">
+        <h2>Acknowledgements</h2>
+        <p> <a href="http://cs.stanford.edu/people/ang/" target="_blank">Andrew Ng</a>,
+            <a href="http://nlp.stanford.edu/manning/" target="_blank">Chris Manning</a>,
+            and <a href="http://robots.stanford.edu/" target="_blank">Sebastian Thrun</a>
+            of the Stanford AI Lab supported the research that made Apollo possible.
+        </p>
+        <p>
+            Special thanks to the Caffe community and it's developers, including
+            <a href="https://github.com/jeffdonahue" target="_blank">Jeff Donahue</a>,
+            <a href="https://github.com/shelhamer" target="_blank">Evan Shelhamer</a>,
+            <a href="https://github.com/Yangqing" target="_blank">Yangqing Jia</a>,
+            <a href="https://github.com/longjon" target="_blank">Jon Long</a>,
+            <a href="https://github.com/sguada" target="_blank">Sergio Guadaramma</a>,
+            <a href="https://github.com/sergeyk" target="_blank">Sergey Karayev</a>,
+            and <a href="https://github.com/qipeng" target="_blank">Peng Qi</a>
+            
+            <br/>
+            <br/>
+            <br/>
+            <br/>
+            <br/>
+            <br/>
+            <br/>
+            <br/>
+        </p>
+    </section>
+</div>
+
+        </div>
+      </div>
+    </div>
+  </body>
+  <script>
+      $('body').scrollspy({
+          target: '.bs-docs-sidebar',
+          offset: 40
+      });
+  </script>
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  
+    ga('create', 'UA-64762743-1', 'auto');
+    ga('send', 'pageview');
+  
+  </script>
+</html>

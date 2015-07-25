@@ -1,0 +1,83 @@
+/* Code blocks */
+/*code, pre {*/
+  /*font-family: monospace;*/
+  /*color:#000;*/
+  /*font-size:12px;*/
+  /*line-height: 14px;*/
+/*}*/
+
+pre code {
+  word-wrap: normal;
+  white-space: pre;
+}
+pre {
+  padding: 6px 12px;
+  background: #FDFEFB;
+  border:1px solid #D7D8C8;
+  overflow: auto;
+  white-space: pre-wrap;
+  margin-bottom: 13px;
+}
+/*.group {*/
+    /*background: yellow;*/
+    /*width: 200px;*/
+    /*height: 500px;*/
+/*}*/
+/*.group .subgroup {*/
+    /*background: orange;*/
+    /*width: 150px;*/
+    /*height: 200px;*/
+/*}*/
+.fixed {
+    position: fixed;
+}
+.bs-docs-sidebar {
+    padding-left: 20px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+/* all links */
+.bs-docs-sidebar .nav>li>a {
+    color: #999;
+    padding: 4px 20px;
+    font-size: 13px;
+    font-weight: 400;
+}
+
+/* nested links */
+.bs-docs-sidebar .nav .nav>li>a {
+    padding-top: 1px;
+    padding-bottom: 1px;
+    padding-left: 30px;
+    font-size: 12px;
+}
+.bs-docs-sidebar .nav>.active>a { 
+    color: #563d7c;
+}
+/* all links */
+.bs-docs-sidebar .nav>li>a {
+    /*add trasnparent border */
+    border-left: 2px solid transparent;
+}
+/* active & hover links */
+.bs-docs-sidebar .nav>.active>a, 
+.bs-docs-sidebar .nav>li>a:hover, 
+.bs-docs-sidebar .nav>li>a:focus {
+    color: #563d7c;                 
+    text-decoration: none;          
+    background-color: transparent;  
+    border-left: 2px solid #563d7c; 
+}
+/* hide all (inactive) nested list */
+.bs-docs-sidebar .nav ul.nav {
+    display: none;           
+}
+/* show active nested list */
+.bs-docs-sidebar .nav>.active>ul.nav {
+    display: block;           
+}
+@media screen and (max-width: 700px) {
+    .bs-docs-sidebar {
+        display:none
+    }
+}
