@@ -19,7 +19,7 @@ __device__ Dtype cuda_sigmoid_diff(Dtype x) {
 template <typename Dtype>
 __device__ Dtype cuda_tanh(Dtype x) {
   Dtype exp2x = exp(2 * x);
-  return abs(x) < Dtype(5) ? ((exp2x - Dtype(1)) / (exp2x + Dtype(1))) : (x > 0 ? Dtype(1) : Dtype(-1));
+  return fabs(x) < Dtype(5) ? ((exp2x - Dtype(1)) / (exp2x + Dtype(1))) : (x > 0 ? Dtype(1) : Dtype(-1));
 }
 
 template <typename Dtype>
