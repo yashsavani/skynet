@@ -18,7 +18,7 @@ cdef extern from "caffe/caffe.hpp" namespace "caffe::Caffe":
         CPU = 0
         GPU = 1
     void set_mode(Brew)
-    void SetDevice(int)
+    void SetDevice(int) except+
     void set_logging_verbosity(int level)
 
 cdef class Caffe:
