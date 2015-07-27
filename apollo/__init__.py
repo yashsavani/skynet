@@ -4,3 +4,4 @@ import log
 from architecture import Architecture
 
 log.setup_logging()
+Caffe.set_logging_verbosity(3)
