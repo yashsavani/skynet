@@ -3,7 +3,6 @@
 #include "caffe/layer.hpp"
 #include "caffe/neuron_layers.hpp"
 #include "caffe/util/math_functions.hpp"
-#include "caffe/layers/absval_layer.hpp"
 
 namespace caffe {
 

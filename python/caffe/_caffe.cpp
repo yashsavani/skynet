@@ -16,7 +16,6 @@
 
 #include "caffe/caffe.hpp"
 #include "caffe/python_layer.hpp"
-#include "caffe/layers/memory_data_layer.hpp"
 
 // Temporary solution for numpy < 1.7 versions: old macro, no promises.
 // You're strongly advised to upgrade to >= 1.7.

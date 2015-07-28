@@ -4,7 +4,6 @@
 #include "caffe/layer.hpp"
 #include "caffe/util/im2col.hpp"
 #include "caffe/vision_layers.hpp"
-#include "caffe/layers/im2col_layer.hpp"
 
 namespace caffe {
 

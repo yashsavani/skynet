@@ -10,7 +10,6 @@
 
 #include "caffe/test/test_caffe_main.hpp"
 #include "caffe/test/test_gradient_check_util.hpp"
-#include "caffe/layers/concat_layer.hpp"
 
 namespace caffe {
 

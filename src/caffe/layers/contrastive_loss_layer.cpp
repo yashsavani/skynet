@@ -5,7 +5,6 @@
 #include "caffe/loss_layers.hpp"
 #include "caffe/util/io.hpp"
 #include "caffe/util/math_functions.hpp"
-#include "caffe/layers/contrastive_loss_layer.hpp"
 
 namespace caffe {
 
