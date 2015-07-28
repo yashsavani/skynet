@@ -30,7 +30,9 @@ class Architecture(object):
             new_layer = layers.Unknown({})
             new_layer.p = layer
             if len(new_layer.p.top) == 0:
-                new_layer.p.top.append(new_layer.p.name)
+                if str(layer.type) != "Silence":
+                    # hack to handle Silence layer not having a top
+                    new_layer.p.top.append(new_layer.p.name)
             self.layers.append(new_layer)
         return net
     def forward(self, net):

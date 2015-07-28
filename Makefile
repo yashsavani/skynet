@@ -175,6 +175,12 @@ LIBRARIES += glog gflags protobuf leveldb snappy \
 PYTHON_LIBRARIES := boost_python python2.7
 WARNINGS := -Wall -Wno-sign-compare
 
+USE_DLIB ?= 0
+ifeq ($(USE_DLIB), 1)
+	COMMON_FLAGS += -DUSE_DLIB
+	LIBRARIES += dlib
+endif
+
 ##############################
 # Set build directories
 ##############################

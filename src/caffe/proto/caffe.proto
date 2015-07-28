@@ -331,6 +331,7 @@ message LayerParameter {
   optional HDF5DataParameter hdf5_data_param = 112;
   optional HDF5OutputParameter hdf5_output_param = 113;
   optional HingeLossParameter hinge_loss_param = 114;
+  optional HungarianLossParameter hungarian_loss_param = 214;
   optional ImageDataParameter image_data_param = 115;
   optional InfogainLossParameter infogain_loss_param = 116;
   optional InnerProductParameter inner_product_param = 117;
@@ -607,6 +608,11 @@ message HingeLossParameter {
   }
   // Specify the Norm to use L1 or L2
   optional Norm norm = 1 [default = L1];
+}
+
+message HungarianLossParameter {
+  optional float match_ratio = 1 [default = 0.5];
+  optional bool permute_matches = 2 [default = true];
 }
 
 message ImageDataParameter {
