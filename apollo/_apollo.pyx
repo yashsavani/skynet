@@ -336,9 +336,11 @@ cdef class Net:
         if extension == '.h5':
             with h5py.File(filename, 'r') as f:
                 params = self.params
-                for name, stored_value in f.items():
+                names = []
+                f.visit(names.append)
+                for name in names :
                     if name in params:
-                        params[name].data[:] = stored_value
+                        params[name].data[:] = f[name]
         elif extension == '.caffemodel':
             self.thisptr.CopyTrainedLayersFrom(filename)
         else:
