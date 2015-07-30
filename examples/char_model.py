@@ -147,15 +147,15 @@ def eval_forward(net, hyper):
     return 0.
 
 def main():
-    hyper = apollo.default_hyper(
-        max_iter=10000,
-        snapshot_prefix='/tmp/char',
-        snapshot_interval=1000,
-        random_seed=22,
-        gamma=0.8,
-        stepsize=2500,
-        graph_interval=1000,
-        graph_prefix='')
+    hyper = apollo.default_hyper()
+    hyper['max_iter'] = 10000
+    hyper['snapshot_prefix'] = '/tmp'
+    hyper['snapshot_interval'] = 1000
+    hyper['random_seed'] = 22
+    hyper['gamma'] = 0.8
+    hyper['stepsize'] = 2500
+    hyper['graph_interval'] = 1000
+    hyper['graph_prefix'] = ''
     hyper['mem_cells'] = 250
     hyper['vocab_size'] = 256
     hyper['batch_size'] = 32
@@ -174,8 +174,9 @@ def main():
     sentences = get_data()
     sentence_batches = get_data_batch(sentences, hyper)
 
-    apollo.update_hyper(hyper, apollo.default_parser().parse_args())
-    apollo.train(hyper, forward=(
+    args = apollo.default_parser().parse_args()
+    hyper.update({k:v for k, v in vars(args).iteritems() if v is not None})
+    apollo.default_train(hyper, forward=(
         lambda net, hyper: forward(net, hyper, sentence_batches)),
         test_forward=eval_forward)
 

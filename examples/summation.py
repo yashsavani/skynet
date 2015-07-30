@@ -94,21 +94,23 @@ def eval():
     print evaluate_forward(eval_net)
 
 def main():
-    hyper = apollo.default_hyper(momentum=0.9,
-        clip_gradients=0.1,
-        display_interval=100,
-        max_iter=5001,
-        snapshot_interval=1000,
-        random_seed=7,
-        gamma=0.5,
-        stepsize=1000,
-        graph_interval=1000)
+    hyper = apollo.default_hyper()
+    hyper['momentum'] = 0.9
+    hyper['clip_gradients'] = 0.1
+    hyper['display_interval'] = 100
+    hyper['max_iter'] = 5001
+    hyper['snapshot_interval'] = 1000
+    hyper['random_seed'] = 7
+    hyper['gamma'] = 0.5
+    hyper['stepsize'] = 1000
+    hyper['graph_interval'] = 1000
     hyper['base_lr'] = 0.03
     hyper['batch_size'] = 32
     hyper['init_range'] = 0.1
     hyper['mem_cells'] = 1000
-    apollo.update_hyper(hyper, apollo.default_parser().parse_args())
-    apollo.train(hyper, forward=forward)
+    args = apollo.default_parser().parse_args()
+    hyper.update({k:v for k, v in vars(args).iteritems() if v is not None})
+    apollo.default_train(hyper, forward=forward)
     eval()
 
 if __name__ == '__main__':

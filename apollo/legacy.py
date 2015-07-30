@@ -47,43 +47,6 @@ class Architecture(object):
             loss += net.forward_layer(x)
         return loss
 
-def run(hyper):
-    net = apollo.Net()
-
-    arch.forward(net)
-    if hyper['weights']:
-        print 'loading weights from %s' % hyper['weights']
-        net.load(hyper['weights'])
-    net.reset_forward()
-
-    test_arch.forward(test_net)
-    test_net.reset_forward()
-
-    def test_performance(net, test_net):
-        test_error = []
-        test_net.copy_params_from(net)
-        for _ in range(hyper['test_iter']):
-            test_error.append(test_arch.forward(test_net))
-            test_net.reset_forward()
-        logging.info('Test Error: %f' % np.mean(test_error))
-
-    error = []
-    for i in range(hyper['max_iter']):
-        error.append(arch.forward(net))
-        net.backward()
-        lr = (hyper['base_lr'] / (hyper.get('gamma', 1.))**(i // hyper['stepsize']))
-        net.update(lr=lr, momentum=hyper['momentum'],
-            clip_gradients=hyper.get('clip_gradients', -1), weight_decay=hyper['weight_decay'])
-        if i % hyper['display_interval'] == 0:
-            logging.info('Iteration %d: %s' % (i, np.mean(error)))
-            error = []
-        if i % hyper['test_interval'] == 0:
-            test_performance(net, test_net)
-            if 'accuracy' in test_net.tops:
-                logging.info('Accuracy: %.5f' % test_net.tops['accuracy'].data.flatten()[0])
-        if i % hyper['snapshot_interval'] == 0 and i > 0:
-            net.save('%s_%d.h5' % (hyper['snapshot_prefix'], i))
-
 def main():
     parser = apollo.default_parser()
     parser.add_argument('--solver')
@@ -92,7 +55,7 @@ def main():
     config = imp.load_source('module.name', args.solver)
     hyper = apollo.default_hyper()
     hyper.update(config.get_hyper())
-    apollo.update_hyper(hyper, args)
+    hyper.update({k:v for k, v in vars(args).iteritems() if v is not None})
 
     arch = Architecture()
     arch.load_from_proto(hyper['net_prototxt'])
@@ -101,7 +64,7 @@ def main():
     test_arch = Architecture(phase='test')
     test_arch.load_from_proto(hyper['net_prototxt'])
 
-    apollo.train(hyper, forward=arch.forward, test_forward=test_arch.forward)
+    apollo.default_train(hyper, forward=arch.forward, test_forward=test_arch.forward)
 
 
 if __name__ == '__main__':
