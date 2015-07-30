@@ -38,11 +38,10 @@ class Architecture(object):
             new_layer.p = layer
             if len(new_layer.p.top) == 0:
                 if str(layer.type) != "Silence":
-                    # hack to handle Silence layer not having a top
                     new_layer.p.top.append(new_layer.p.name)
             self.layers.append(new_layer)
         return net
-    def forward(self, net):
+    def forward(self, net, hyper):
         loss = 0
         for x in self.layers:
             loss += net.forward_layer(x)
@@ -50,12 +49,6 @@ class Architecture(object):
 
 def run(hyper):
     net = apollo.Net()
-    arch = Architecture()
-    arch.load_from_proto(hyper['net_prototxt'])
-
-    test_net = apollo.Net(phase='test')
-    test_arch = Architecture(phase='test')
-    test_arch.load_from_proto(hyper['net_prototxt'])
 
     arch.forward(net)
     if hyper['weights']:
@@ -92,25 +85,23 @@ def run(hyper):
             net.save('%s_%d.h5' % (hyper['snapshot_prefix'], i))
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--loglevel', default=3, type=int)
-    parser.add_argument('--gpu', default=None)
-    parser.add_argument('--weights', default=None)
+    parser = apollo.default_parser()
     parser.add_argument('--solver')
     args = parser.parse_args()
 
     config = imp.load_source('module.name', args.solver)
-    hyper = config.get_hyper()
-    hyper['weights'] = args.weights
+    hyper = apollo.default_hyper()
+    hyper.update(config.get_hyper())
+    apollo.update_hyper(hyper, args)
 
-    if args.gpu is not None:
-        apollo.Caffe.set_mode_gpu()
-        apollo.Caffe.set_device(int(args.gpu))
-    else:
-        apollo.Caffe.set_mode_cpu()
-    apollo.Caffe.set_random_seed(hyper.get('random_seed', 0))
-    apollo.Caffe.set_logging_verbosity(args.loglevel)
-    run(hyper)
+    arch = Architecture()
+    arch.load_from_proto(hyper['net_prototxt'])
+
+    test_net = apollo.Net(phase='test')
+    test_arch = Architecture(phase='test')
+    test_arch.load_from_proto(hyper['net_prototxt'])
+
+    apollo.train(hyper, forward=arch.forward, test_forward=test_arch.forward)
 
 
 if __name__ == '__main__':

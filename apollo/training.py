@@ -62,6 +62,13 @@ def train(hyper, forward, test_forward=None):
     net.draw_to_file(network_path)
     logging.info('Drawing network to %s' % network_path)
     net.reset_forward()
+
+    if hyper.get('separate_test_net', True) == True:
+        test_net = apollo.Net()
+        test_forward(test_net, hyper)
+        test_net.reset_forward()
+    else:
+        test_net = net
     if 'weights' in hyper:
         net.load(hyper['weights'])
 
@@ -85,14 +92,19 @@ def train(hyper, forward, test_forward=None):
             logging.info('Saving figure to: %s' % filename)
             plt.savefig(filename)
         if hyper['test_interval'] is not None and i % hyper['test_interval'] == 0:
-            # TODO implement
-            #test_loss = []
-            #net.set_phase('test')
-            #for j in xrange(hyper['test_iter']):
-                #test_loss.append(test_forward(net, hyper))
-            #logging.info('Test loss: %f' % np.mean(test_loss))
-            #net.set_phase('train')
-            pass
+            test_loss = []
+            accuracy = []
+            test_net.phase = 'test'
+            test_net.copy_params_from(net)
+            for j in xrange(hyper['test_iter']):
+                test_loss.append(test_forward(test_net, hyper))
+                test_net.reset_forward()
+                if 'accuracy' in test_net.tops:
+                    accuracy.append(test_net.tops['accuracy'].data.flatten()[0])
+            if len(accuracy) > 0:
+                logging.info('Accuracy: %.5f' % np.mean(accuracy))
+            logging.info('Test loss: %f' % np.mean(test_loss))
+            test_net.phase = 'train'
 
 def default_parser():
     parser = argparse.ArgumentParser()

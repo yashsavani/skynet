@@ -5,7 +5,7 @@ from libcpp cimport bool
 from libcpp.set cimport set
 from libcpp.map cimport map
 from cython.operator cimport postincrement, dereference
-from definitions cimport Tensor as CTensor, Blob as CBlob, Layer as CLayer, shared_ptr, LayerParameter, ApolloNet
+from definitions cimport Tensor as CTensor, Blob as CBlob, Layer as CLayer, shared_ptr, LayerParameter, ApolloNet, TRAIN, TEST
 
 import numpy as pynp
 import utils.draw
@@ -188,16 +188,25 @@ cdef class Layer(object):
         
 cdef class Net:
     cdef ApolloNet* thisptr
-    def __cinit__(self, phase='train'):
+    def __cinit__(self):
         self.thisptr = new ApolloNet()
-        if phase == 'train':
-            self.thisptr.set_phase_train()
-        elif phase == 'test':
-            self.thisptr.set_phase_test()
-        else:
-            raise ValueError("phase must be one of ['train', 'test']")
     def __dealloc__(self):
         del self.thisptr
+    property phase:
+        def __get__(self):
+            if self.thisptr.phase() == TRAIN:
+                return 'train'
+            elif self.thisptr.phase() == TEST:
+                return 'test'
+            else:
+                raise ValueError("phase must be one of ['train', 'test']")
+        def __set__(self, value):
+            if value == 'train':
+                self.thisptr.set_phase_train()
+            elif value == 'test':
+                self.thisptr.set_phase_test()
+            else:
+                raise ValueError("phase must be one of ['train', 'test']")
     def forward_layer(self, layer):
         return self.thisptr.ForwardLayer(layer.p.SerializeToString(), layer.r.SerializeToString())
     def backward_layer(self, layer_name):
