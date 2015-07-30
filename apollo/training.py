@@ -10,11 +10,7 @@ import apollo
 def default_hyper():
     hyper = {}
     hyper['gpu'] = None
-    hyper['momentum'] = 0.0
-    hyper['weight_decay'] = 0.0
     hyper['display_interval'] = 100
-    hyper['stepsize'] = 10000
-    hyper['gamma'] = 1.0
     hyper['random_seed'] = 91
     hyper['max_iter'] = sys.maxint
     hyper['test_interval'] = None
@@ -31,6 +27,10 @@ def validate_hyper(hyper):
         raise AttributeError('hyper is missing base_lr')
     if not os.path.isdir(hyper['snapshot_prefix']):
         raise OSError('%s does not exist' % hyper['snapshot_prefix'])
+    if not os.path.isdir(hyper['graph_prefix']):
+        raise OSError('%s does not exist' % hyper['graph_prefix'])
+    if not os.path.isdir(hyper['schematic_prefix']):
+        raise OSError('%s does not exist' % hyper['schematic_prefix'])
 
 def default_train(hyper, forward, test_forward=None):
     if test_forward is None:
@@ -74,9 +74,9 @@ def default_train(hyper, forward, test_forward=None):
     for i in xrange(hyper['start_iter'], hyper['max_iter']):
         train_loss_hist.append(forward(net, hyper))
         net.backward()
-        lr = (hyper['base_lr'] * (hyper['gamma'])**(i // hyper['stepsize']))
-        net.update(lr=lr, momentum=hyper['momentum'],
-            clip_gradients=hyper.get('clip_gradients', -1), weight_decay=hyper['weight_decay'])
+        lr = (hyper['base_lr'] * hyper.get('gamma', 1.)**(i // hyper.get('stepsize', sys.maxint)))
+        net.update(lr=lr, momentum=hyper.get('momentum', 0.0),
+            clip_gradients=hyper.get('clip_gradients', -1), weight_decay=hyper.get('weight_decay', 0.0))
         if i % hyper['display_interval'] == 0:
             logging.info('Iteration %d: %s' % (i, np.mean(train_loss_hist[-hyper['display_interval']:])))
         if i % hyper['snapshot_interval'] == 0 and i > hyper['start_iter']:
