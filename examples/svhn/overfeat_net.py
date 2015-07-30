@@ -35,11 +35,7 @@ class OverfeatNet:
         return len(self.batch.image_array)
 
     # returns list of bounding boxes using non max suppresssion
-    def __init_rect_list(self, bottom_height, 
-                               bottom_width, 
-                               bbox_label_pred, 
-                               label_pred, 
-                               min_prob = 0.5):   
+    def __init_rect_list(self, ind, min_prob = 0.5):   
         """
         Returns list of Rect instances from output of neural network for a single image.
 
@@ -52,6 +48,15 @@ class OverfeatNet:
                 different labels
         
         """
+        #bbox_label_pred = self.net.tops['bbox_label'].data[ind]
+        #label_pred = self.net.tops['binary_label'].data[ind]
+
+        bottom_height = self.image_height
+        bottom_width = self.image_width
+        bbox_label_pred = self.net.tops['bbox_pred'].data[ind]
+        binary_pred = self.net.tops['binary_softmax'].data[ind]
+        label_pred = self.net.tops['label_softmax'].data[ind]
+        
         (_, top_height, top_width) = bbox_label_pred.shape
         y_mul = bottom_height * 1. / top_height
         x_mul = bottom_width * 1. / top_width
@@ -62,14 +67,9 @@ class OverfeatNet:
                 cx_orig = x_mul * (x + 0.5)
                 cy_orig = y_mul * (y + 0.5)
 
-                # find indices where probability exceeds minimum, excluding negative class
-                #indices = [k for k in xrange(len(label_pred)) if label_pred[k, y, x] > 0.2 and k != 0]
-                #TODO: example
-                if label_pred[0, y, x] < 0.5:
-                #if label_pred[k, y, x] > 0.5:
-                #if label_pred[1, y, x] > min_prob:
-                    #k = 1
-                    k = np.argmax(label_pred[1:, y, x]) + 1
+                # we predict a symbol here
+                if binary_pred[1, y, x] > 0.5:
+                    k = np.argmax(label_pred[:, y, x]) 
                     # apply offsets to get positions in original image
                     cx = cx_orig + bbox_label_pred[0, y, x]
                     cy = cy_orig + bbox_label_pred[1, y, x]
@@ -77,9 +77,7 @@ class OverfeatNet:
                     h = bbox_label_pred[3, y, x]
                     xmin = cx - w / 2
                     ymin = cy - h / 2
-                    #TODO
                     rect = Rect(xmin, ymin, xmin + w, ymin + h, label=k, prob=label_pred[k, y, x])
-                    #rect = Rect(xmin, ymin, xmin + w, ymin + h, label=k, prob=1.)
                     rect_list.append(rect)
 
         return rect_list
@@ -93,14 +91,7 @@ class OverfeatNet:
             List(Rect): list of Rect instances 
             extracted from the top of the network.
         """
-        #TODO: modify since now have labels too
-        # prediction for first rect
-        bbox_label_pred = self.net.tops['bbox_pred'].data[ind]
-        #bbox_label_pred = self.net.tops['bbox_label'].data[ind]
-        label_pred = self.net.tops['binary_softmax'].data[ind]
-        #label_pred[0] = label_pred[1]
-        #label_pred = self.net.tops['binary_label'].data[ind]
-        rect_list = self.__init_rect_list(self.image_height, self.image_width, bbox_label_pred, label_pred)
+        rect_list = self.__init_rect_list(ind)
         rect_list = reduced_rect_list(rect_list)
         return rect_list
 
@@ -114,7 +105,6 @@ class OverfeatNet:
         image_array = batch.image_array
         bbox_label = batch.bbox_label_array
         conf_label = batch.conf_label_array
-        #net.forward_layer(layers.Pooling(name="pool1", bottoms=["conv2"], kernel_size=2, stride=2))
         binary_label_array = batch.binary_label_array
         net = self.net
         net.forward_layer(layers.NumpyData(name="data", data=image_array))
@@ -123,25 +113,23 @@ class OverfeatNet:
         net.forward_layer(layers.NumpyData(name="binary_label", data=binary_label_array))
         net.forward_layer(layers.NumpyData(name="spatial_array", data=spatial_coord))
 
-
+        # parameters
         weight_filler = layers.Filler(type="xavier")
         bias_filler = layers.Filler(type="constant", value=0.2)
         conv_lr_mults = [1.0, 2.0]
         conv_decay_mults = [1.0, 0.0]
 
-        # alexnet layers
-        #conv_weight_filler = layers.Filler(type="gaussian", std=0.01)
-        #conv_bias_filler = layers.Filler(type="constant", value=0.0)
-        #inner_prod_filler = layers.Filler(type="constant", value=1.0)
-
         # bunch of conv / relu layers
-        net.forward_layer(layers.Convolution(name="conv1", bottoms=["data"], param_lr_mults=conv_lr_mults, param_decay_mults=conv_decay_mults, kernel_size=7, stride=1, pad=3, weight_filler=weight_filler, bias_filler=bias_filler, num_output=256))
+        net.forward_layer(layers.Convolution(name="conv1", bottoms=["data"], param_lr_mults=conv_lr_mults, param_decay_mults=conv_decay_mults, kernel_size=5, stride=1, pad=2, weight_filler=weight_filler, bias_filler=bias_filler, num_output=256))
         net.forward_layer(layers.ReLU(name="relu1", bottoms=["conv1"], tops=["conv1"]))
 
         net.forward_layer(layers.Convolution(name="conv2", bottoms=["conv1"], param_lr_mults=conv_lr_mults, param_decay_mults=conv_decay_mults, kernel_size=5, stride=1, pad=2, weight_filler=weight_filler, bias_filler=bias_filler, num_output=128))
         net.forward_layer(layers.ReLU(name="relu2", bottoms=["conv2"], tops=["conv2"]))
 
-        net.forward_layer(layers.Convolution(name="conv3", bottoms=["conv2"], param_lr_mults=conv_lr_mults, param_decay_mults=conv_decay_mults, kernel_size=5, stride=1, pad=2, weight_filler=weight_filler, bias_filler=bias_filler, num_output=128))
+        # only pooling layer
+        net.forward_layer(layers.Pooling(name="pool4", bottoms=["conv2"], kernel_size=2, stride=2)) # finished 2nd pool
+
+        net.forward_layer(layers.Convolution(name="conv3", bottoms=["pool4"], param_lr_mults=conv_lr_mults, param_decay_mults=conv_decay_mults, kernel_size=5, stride=1, pad=2, weight_filler=weight_filler, bias_filler=bias_filler, num_output=128))
         net.forward_layer(layers.ReLU(name="relu3", bottoms=["conv3"], tops=["conv3"]))
 
         net.forward_layer(layers.Convolution(name="conv4", bottoms=["conv3"], param_lr_mults=conv_lr_mults, param_decay_mults=conv_decay_mults, kernel_size=5, stride=1, pad=2, weight_filler=weight_filler, bias_filler=bias_filler, num_output=128))
@@ -162,12 +150,10 @@ class OverfeatNet:
         net.forward_layer(layers.Convolution(name="conv_2", bottoms=["conv_1"], param_lr_mults=conv_lr_mults, param_decay_mults=conv_decay_mults, kernel_size=5, stride=1, pad=2, weight_filler=weight_filler, bias_filler=bias_filler, num_output=128)) 
         net.forward_layer(layers.ReLU(name="relu_2", bottoms=["conv_2"], tops=["conv_2"]))
 
-        # only pooling layer
-        net.forward_layer(layers.Pooling(name="pool4", bottoms=["conv_2"], kernel_size=2, stride=2)) # finished 2nd pool
 
         # add spatial information so network is biased to ignore borders
         net.forward_layer(layers.Concat(name='concat_stuff',
-            bottoms=['pool4', 'spatial_array']))
+            bottoms=['conv_2', 'spatial_array']))
 
         # inner product layers
         net.forward_layer(layers.Convolution(name="conv8", bottoms=["concat_stuff"], param_lr_mults=conv_lr_mults,
@@ -186,10 +172,8 @@ class OverfeatNet:
 
         # character predictions
         label_softmax_loss = 0
-        net.forward_layer(layers.Concat(name='label_mask', bottoms =  11 * ['binary_label']))
         net.forward_layer(layers.Convolution(name="label_conf_pred", bottoms=["L7"], param_lr_mults=conv_lr_mults, param_decay_mults=conv_decay_mults, kernel_size=1, weight_filler=weight_filler, bias_filler=bias_filler, num_output=11))
-        net.forward_layer(layers.Eltwise(name='label_pred_masked', bottoms=['label_conf_pred', 'label_mask'], operation='PROD'))
-        label_softmax_loss = net.forward_layer(layers.SoftmaxWithLoss(name='label_softmax_loss', bottoms=['label_pred_masked', 'conf_label'], loss_weight=10.0))
+        label_softmax_loss = net.forward_layer(layers.SoftmaxWithLoss(name='label_softmax_loss', bottoms=['label_conf_pred', 'conf_label'], loss_weight=0.1, ignore_label = 0))
         net.forward_layer(layers.Softmax(name='label_softmax', bottoms=['label_conf_pred']))
 
         # bounding box prediction
@@ -201,6 +185,4 @@ class OverfeatNet:
         net.forward_layer(layers.Eltwise(name='bbox_label_masked', bottoms=['bbox_label', 'bbox_mask'], operation='PROD'))
         bbox_loss = net.forward_layer(layers.L1Loss(name='l1_loss', bottoms=['bbox_pred_masked', 'bbox_label_masked'], loss_weight=0.001))
         
-        #print "data: ", net.tops["binary_conf_pred"].data[0][0] 
-        #print "pred: ", net.tops["softmax"].data[0][0] < 0.5
         return (binary_softmax_loss, label_softmax_loss, bbox_loss)

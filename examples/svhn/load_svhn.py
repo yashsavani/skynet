@@ -205,6 +205,7 @@ def get_datum_iterator(data_type = "train", is_random = True):
         Iter(Datum): iterator over datum instances.
     """
     data_source = '%s/data/svhn/' % apollo_root
+    #TODO
     data_type = "test"
     #is_random = False
     #is_random = True

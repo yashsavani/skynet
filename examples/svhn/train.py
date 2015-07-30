@@ -75,7 +75,7 @@ for i in range(hyper['max_iter']):
         for idx in xrange(overfeat_net.batch_size()):
             rect_list = overfeat_net.rect_list(idx)
             if len(rect_list) > 0:
-                print "made detections"
+                logging.info("New detection.")
                 rect_list.sort(key = lambda x: x.xmin)
                 rect_str_list = [str(int(x.label) % 10) for x in rect_list]
                 label_str =  "".join(rect_str_list)
@@ -90,7 +90,7 @@ for i in range(hyper['max_iter']):
                 (h, w, _) = image_new.shape
                 xpos = w / 4
                 ypos = h / 4
-                cv2.putText(image_new, label_str, (xpos, ypos), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255))
+                cv2.putText(image_new, label_str, (xpos, ypos), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 255))
 
             path = "test/%d.png" %(idx)
             cv2.imwrite(path, image_new)
