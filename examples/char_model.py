@@ -155,7 +155,6 @@ def main():
     hyper['gamma'] = 0.8
     hyper['stepsize'] = 2500
     hyper['graph_interval'] = 1000
-    hyper['graph_prefix'] = ''
     hyper['mem_cells'] = 250
     hyper['vocab_size'] = 256
     hyper['batch_size'] = 32
@@ -174,9 +173,9 @@ def main():
     sentences = get_data()
     sentence_batches = get_data_batch(sentences, hyper)
 
-    args = apollo.default_parser().parse_args()
+    args = apollo.utils.training.default_parser().parse_args()
     hyper.update({k:v for k, v in vars(args).iteritems() if v is not None})
-    apollo.default_train(hyper, forward=(
+    apollo.utils.training.default_train(hyper, forward=(
         lambda net, hyper: forward(net, hyper, sentence_batches)),
         test_forward=eval_forward)
 

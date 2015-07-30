@@ -39,7 +39,7 @@ def default_train(hyper, forward, test_forward=None):
     d = default_hyper()
     d.update(hyper)
     hyper = d
-    apollo.validate_hyper(hyper)
+    validate_hyper(hyper)
     random.seed(hyper['random_seed'])
     np.random.seed(hyper['random_seed'])
     apollo.Caffe.set_random_seed(hyper['random_seed'])

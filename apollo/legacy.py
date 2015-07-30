@@ -48,7 +48,7 @@ class Architecture(object):
         return loss
 
 def main():
-    parser = apollo.default_parser()
+    parser = apollo.utils.training.default_parser()
     parser.add_argument('--solver')
     args = parser.parse_args()
 
@@ -64,7 +64,7 @@ def main():
     test_arch = Architecture(phase='test')
     test_arch.load_from_proto(hyper['net_prototxt'])
 
-    apollo.default_train(hyper, forward=arch.forward, test_forward=test_arch.forward)
+    apollo.utils.training.default_train(hyper, forward=arch.forward, test_forward=test_arch.forward)
 
 
 if __name__ == '__main__':
