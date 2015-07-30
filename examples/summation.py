@@ -7,30 +7,7 @@ import argparse
 import apollo
 from apollo import layers
 
-def get_hyper():
-    hyper = {}
-    hyper['batch_size'] = 32
-    hyper['init_range'] = 0.1
-    hyper['base_lr'] = 0.03
-    hyper['weight_decay'] = 0
-    hyper['momentum'] = 0.9
-    hyper['clip_gradients'] = 0.1
-    hyper['display_interval'] = 100
-    hyper['max_iter'] = 5001
-    hyper['snapshot_prefix'] = '/tmp/summation'
-    hyper['snapshot_interval'] = 1000
-    hyper['random_seed'] = 22
-    hyper['gamma'] = 0.5
-    hyper['stepsize'] = 1000
-    hyper['solver_mode'] = 'gpu'
-    hyper['mem_cells'] = 1000
-    hyper['graph_interval'] = 1000
-    hyper['graph_prefix'] = ''
-    return hyper
-
-hyper = get_hyper()
-
-def forward(net):
+def forward(net, hyper):
     length = random.randrange(5, 15)
 
     # initialize all weights in [-0.1, 0.1]
@@ -79,27 +56,46 @@ def forward(net):
         bottoms=['ip', 'label']))
     return loss
 
-def train():
-    net = apollo.Net()
-    train_loss_hist = []
+def train(hyper):
+    apollo.set_random_seed(hyper['random_seed'])
+    if hyper['gpu'] is None:
+        apollo.set_mode_cpu()
+        logging.info('Using cpu device (pass --gpu X to train on the gpu)')
+    else:
+        apollo.set_mode_gpu()
+        apollo.set_device(hyper['gpu'])
+        logging.info('Using gpu device %d' % hyper['gpu'])
+    apollo.set_logging_verbosity(hyper['loglevel'])
 
-    for i in range(hyper['max_iter']):
-        train_loss_hist.append(forward(net))
+    net = apollo.Net()
+    forward(net, hyper)
+    network_path = '%s/network.jpg' % hyper['schematic_prefix']
+    net.draw_to_file(network_path)
+    logging.info('Drawing network to %s' % network_path)
+    net.reset_forward()
+    if 'weights' in hyper:
+        logging.info('Loading weights from %s' % hyper['weights'])
+        net.load(hyper['weights'])
+
+    train_loss_hist = []
+    for i in xrange(hyper['start_iter'], hyper['max_iter']):
+        train_loss_hist.append(forward(net, hyper))
         net.backward()
-        lr = (hyper['base_lr'] * (hyper['gamma'])**(i // hyper['stepsize']))
+        lr = (hyper['base_lr'] * hyper['gamma']**(i // hyper['stepsize']))
         net.update(lr=lr, momentum=hyper['momentum'],
-            clip_gradients=hyper['clip_gradients'], weight_decay=hyper['weight_decay'])
+            clip_gradients=hyper['clip_gradients'])
         if i % hyper['display_interval'] == 0:
-            logging.info('Iteration %d: %s' % 
-                (i, np.mean(train_loss_hist[-hyper['display_interval']:])))
-        if (i % hyper['snapshot_interval'] == 0 and i > 0) or i == hyper['max_iter'] - 1:
-            filename = '%s_%d.h5' % (hyper['snapshot_prefix'], i)
+            logging.info('Iteration %d: %s' % (i, np.mean(train_loss_hist[-hyper['display_interval']:])))
+        if i % hyper['snapshot_interval'] == 0 and i > hyper['start_iter']:
+            filename = '%s/%d.h5' % (hyper['snapshot_prefix'], i)
             logging.info('Saving net to: %s' % filename)
             net.save(filename)
-        if i % hyper['graph_interval'] == 0 and i > 0:
-            sub = 100
+        if i % hyper['graph_interval'] == 0 and i > hyper['start_iter']:
+            sub = hyper.get('sub', 100)
             plt.plot(np.convolve(train_loss_hist, np.ones(sub)/sub)[sub:-sub])
-            plt.savefig('%strain_loss.jpg' % hyper['graph_prefix'])
+            filename = '%s/train_loss.jpg' % hyper['graph_prefix']
+            logging.info('Saving figure to: %s' % filename)
+            plt.savefig(filename)
 
 def evaluate_forward(net):
     length = 20
@@ -131,7 +127,7 @@ def evaluate_forward(net):
         net.reset_forward()
     return predictions
 
-def eval():
+def eval(hyper):
     eval_net = apollo.Net()
     # evaluate the net once to set up structure before loading parameters
     evaluate_forward(eval_net)
@@ -139,17 +135,35 @@ def eval():
     print evaluate_forward(eval_net)
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--gpu', default=0, type=int)
-    parser.add_argument('--loglevel', default=3, type=int)
-    args = parser.parse_args()
-    apollo.set_random_seed(hyper['random_seed'])
-    apollo.set_mode_gpu()
-    apollo.set_device(args.gpu)
-    apollo.set_logging_verbosity(args.loglevel)
+    hyper = {}
+    hyper['gpu'] = None
+    hyper['batch_size'] = 32
+    hyper['init_range'] = 0.1
+    hyper['base_lr'] = 0.03
+    hyper['momentum'] = 0.9
+    hyper['clip_gradients'] = 0.1
+    hyper['display_interval'] = 100
+    hyper['max_iter'] = 5001
+    hyper['snapshot_prefix'] = '/tmp'
+    hyper['schematic_prefix'] = '/tmp'
+    hyper['snapshot_interval'] = 1000
+    hyper['random_seed'] = 21
+    hyper['gamma'] = 0.5
+    hyper['stepsize'] = 1000
+    hyper['solver_mode'] = 'gpu'
+    hyper['mem_cells'] = 1000
+    hyper['graph_interval'] = 1000
+    hyper['graph_prefix'] = '/tmp'
 
-    train()
-    eval()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--gpu', type=int)
+    parser.add_argument('--loglevel', default=3, type=int)
+    parser.add_argument('--start_iter', default=0, type=int)
+    parser.add_argument('--weights', default=None, type=str)
+    args = parser.parse_args()
+    hyper.update({k:v for k, v in vars(args).iteritems() if v is not None})
+    train(hyper)
+    eval(hyper)
 
 if __name__ == '__main__':
     main()

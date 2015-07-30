@@ -41,17 +41,15 @@ def default_train(hyper, forward, test_forward=None):
     hyper = d
     validate_hyper(hyper)
     apollo.set_random_seed(hyper['random_seed'])
-    if hyper['gpu'] is not None:
-        apollo.Caffe.set_mode_gpu()
-        apollo.Caffe.set_device(hyper['gpu'])
-    else:
-        apollo.Caffe.set_mode_cpu()
-    apollo.Caffe.set_logging_verbosity(hyper['loglevel'])
-
     if hyper['gpu'] is None:
+        apollo.set_mode_cpu()
         logging.info('Using cpu device (pass --gpu X to train on the gpu)')
     else:
+        apollo.set_mode_gpu()
+        apollo.set_device(hyper['gpu'])
         logging.info('Using gpu device %d' % hyper['gpu'])
+    apollo.set_logging_verbosity(hyper['loglevel'])
+
     net = apollo.Net()
     forward(net, hyper)
     network_path = '%s/network.jpg' % hyper['schematic_prefix']
@@ -66,6 +64,7 @@ def default_train(hyper, forward, test_forward=None):
     else:
         test_net = net
     if 'weights' in hyper:
+        logging.info('Loading weights from %s' % weights)
         net.load(hyper['weights'])
 
     train_loss_hist = []

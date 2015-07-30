@@ -7,6 +7,7 @@ from ._apollo import Tensor, Net, Caffe, make_numpy_data_param, Blob
 log.setup_logging()
 
 set_mode_gpu = Caffe.set_mode_gpu
+set_mode_cpu = Caffe.set_mode_cpu
 set_logging_verbosity = Caffe.set_logging_verbosity
 set_device = Caffe.set_device
 set_logging_verbosity(3)
