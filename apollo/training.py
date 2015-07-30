@@ -52,6 +52,10 @@ def train(hyper, forward, test_forward=None):
     validate_hyper(hyper)
     apollo.init_flags(hyper)
 
+    if hyper['gpu'] is None:
+        logging.info('Using cpu device')
+    else:
+        logging.info('Using gpu device %d' % hyper['gpu'])
     net = apollo.Net()
     forward(net, hyper)
     network_path = '%s/network.jpg' % hyper['schematic_prefix']
