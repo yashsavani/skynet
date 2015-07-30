@@ -147,7 +147,7 @@ def eval_forward(net, hyper):
     return 0.
 
 def main():
-    hyper = apollo.default_hyper()
+    hyper = {}
     hyper['max_iter'] = 10000
     hyper['snapshot_prefix'] = '/tmp'
     hyper['snapshot_interval'] = 1000

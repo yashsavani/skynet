@@ -36,6 +36,9 @@ def default_train(hyper, forward, test_forward=None):
     if test_forward is None:
         test_forward=forward
     import matplotlib; matplotlib.use('Agg', warn=False); import matplotlib.pyplot as plt
+    d = default_hyper()
+    d.update(hyper)
+    hyper = d
     apollo.validate_hyper(hyper)
     random.seed(hyper['random_seed'])
     np.random.seed(hyper['random_seed'])

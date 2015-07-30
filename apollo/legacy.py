@@ -53,7 +53,7 @@ def main():
     args = parser.parse_args()
 
     config = imp.load_source('module.name', args.solver)
-    hyper = apollo.default_hyper()
+    hyper = {}
     hyper.update(config.get_hyper())
     hyper.update({k:v for k, v in vars(args).iteritems() if v is not None})
 

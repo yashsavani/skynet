@@ -94,7 +94,7 @@ def eval():
     print evaluate_forward(eval_net)
 
 def main():
-    hyper = apollo.default_hyper()
+    hyper = {}
     hyper['momentum'] = 0.9
     hyper['clip_gradients'] = 0.1
     hyper['display_interval'] = 100
