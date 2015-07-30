@@ -5,9 +5,10 @@ from libcpp cimport bool
 from libcpp.set cimport set
 from libcpp.map cimport map
 from cython.operator cimport postincrement, dereference
-from definitions cimport Tensor as CTensor, Blob as CBlob, Layer as CLayer, shared_ptr, LayerParameter, ApolloNet
+from definitions cimport Tensor as CTensor, Blob as CBlob, Layer as CLayer, shared_ptr, LayerParameter, ApolloNet, TRAIN, TEST
 
 import numpy as pynp
+import utils.draw
 import h5py
 import os
 import caffe_pb2
@@ -18,7 +19,7 @@ cdef extern from "caffe/caffe.hpp" namespace "caffe::Caffe":
         CPU = 0
         GPU = 1
     void set_mode(Brew)
-    void SetDevice(int)
+    void SetDevice(int) except+
     void set_logging_verbosity(int level)
 
 cdef class Caffe:
@@ -187,16 +188,25 @@ cdef class Layer(object):
         
 cdef class Net:
     cdef ApolloNet* thisptr
-    def __cinit__(self, phase='train'):
+    def __cinit__(self):
         self.thisptr = new ApolloNet()
-        if phase == 'train':
-            self.thisptr.set_phase_train()
-        elif phase == 'test':
-            self.thisptr.set_phase_test()
-        else:
-            raise ValueError("phase must be one of ['train', 'test']")
     def __dealloc__(self):
         del self.thisptr
+    property phase:
+        def __get__(self):
+            if self.thisptr.phase() == TRAIN:
+                return 'train'
+            elif self.thisptr.phase() == TEST:
+                return 'test'
+            else:
+                raise ValueError("phase must be one of ['train', 'test']")
+        def __set__(self, value):
+            if value == 'train':
+                self.thisptr.set_phase_train()
+            elif value == 'test':
+                self.thisptr.set_phase_test()
+            else:
+                raise ValueError("phase must be one of ['train', 'test']")
     def forward_layer(self, layer):
         return self.thisptr.ForwardLayer(layer.p.SerializeToString(), layer.r.SerializeToString())
     def backward_layer(self, layer_name):
@@ -257,7 +267,11 @@ cdef class Net:
             layer = param.layer.add()
             layer.CopyFrom(layers[layer_name].layer_param())
         return param
-
+    def draw_to_file(self, filename, rankdir='LR', require_nonempty=True):
+        net_param = self.net_param()
+        if len(net_param.layer) == 0 and require_nonempty:
+            raise ValueError('Cowardly refusing to draw net with no active layers. HINT: call this function before reset_forward()')
+        utils.draw.draw_net_to_file(self.net_param(), filename, rankdir)
     property layers:
         def __get__(self):
             cdef map[string, shared_ptr[CLayer]] layers_map
@@ -331,9 +345,11 @@ cdef class Net:
         if extension == '.h5':
             with h5py.File(filename, 'r') as f:
                 params = self.params
-                for name, stored_value in f.items():
+                names = []
+                f.visit(names.append)
+                for name in names :
                     if name in params:
-                        params[name].data[:] = stored_value
+                        params[name].data[:] = f[name]
         elif extension == '.caffemodel':
             self.thisptr.CopyTrainedLayersFrom(filename)
         else:

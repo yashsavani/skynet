@@ -137,7 +137,7 @@ class Convolution(Layer):
 class Data(Layer):
     def __init__(self, source, batch_size, **kwargs):
         super(Data, self).__init__(kwargs)
-        self.p.type = "Data"
+        self.p.type = type(self).__name__
         self.p.data_param.source = source
         self.p.data_param.backend = DataParameter.LMDB
         self.p.data_param.batch_size = batch_size
@@ -178,6 +178,14 @@ class EuclideanLoss(LossLayer):
         super(EuclideanLoss, self).__init__(kwargs)
         self.p.type = type(self).__name__
 
+class HDF5Data(Layer):
+    def __init__(self, source, batch_size, **kwargs):
+        super(HDF5Data, self).__init__(kwargs)
+        self.p.type = type(self).__name__
+        self.p.hdf5_data_param.source = source
+        self.p.hdf5_data_param.batch_size = batch_size
+        if 'transform' in kwargs:
+            self.p.transform_param.CopyFrom(kwargs['transform'].transform_param)
 class ImageData(Layer):
     def __init__(self, source, batch_size, new_height=None, new_width=None, **kwargs):
         super(ImageData, self).__init__(kwargs)
@@ -275,6 +283,17 @@ class Pooling(Layer):
             else:
                 raise ValueError('Unknown pooling method')
 
+class Power(Layer):
+    def __init__(self, **kwargs):
+        super(Power, self).__init__(kwargs)
+        self.p.type = type(self).__name__
+        if 'power' in kwargs:
+            self.p.power_param.power = kwargs['power']
+        if 'scale' in kwargs:
+            self.p.power_param.scale = kwargs['scale']
+        if 'shift' in kwargs:
+            self.p.power_param.shift = kwargs['shift']
+
 class ReLU(Layer):
     def __init__(self, **kwargs):
         super(ReLU, self).__init__(kwargs)
@@ -293,6 +312,11 @@ class SoftmaxWithLoss(LossLayer):
             self.p.loss_param.normalize = normalize
         if ignore_label is not None:
             self.p.loss_param.ignore_label = ignore_label
+
+class Transpose(Layer):
+    def __init__(self, ignore_label=None, normalize=None, **kwargs):
+        super(Transpose, self).__init__(kwargs)
+        self.p.type = type(self).__name__
 
 class Unknown(Layer):
     def __init__(self, p, r=None):

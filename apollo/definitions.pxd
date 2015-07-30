@@ -18,6 +18,9 @@ cdef extern from "caffe/proto/caffe.pb.h" namespace "caffe":
         string name()
         string& bottom(int)
         int bottom_size()
+    enum Phase:
+        TRAIN = 0
+        TEST = 1
 
 cdef extern from "caffe/tensor.hpp" namespace "caffe":
     cdef cppclass Tensor[float]:
@@ -69,6 +72,7 @@ cdef extern from "caffe/apollonet.hpp" namespace "caffe":
         map[string, float]& param_lr_mults()
         void set_phase_test()
         void set_phase_train()
+        Phase phase()
         void CopyTrainedLayersFrom(string trained_filename) except +
         vector[string]& active_layer_names()
         set[string]& active_param_names()

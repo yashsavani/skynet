@@ -6,7 +6,8 @@ import logging
 import sys
 
 def setup_logging():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+
 def log_to_stdout():
     # set up logging to stdout e.g. for ipython notebook
     root = logging.getLogger()
@@ -17,6 +18,6 @@ def log_to_stdout():
 
     ch = logging.StreamHandler(sys.stdout)
     ch.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(message)s')
     ch.setFormatter(formatter)
     root.addHandler(ch)

@@ -389,6 +389,40 @@ class HingeLossLayer : public LossLayer<Dtype> {
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
 };
 
+#ifdef USE_DLIB
+template <typename Dtype>
+class HungarianLossLayer : public LossLayer<Dtype> {
+ public:
+  explicit HungarianLossLayer(const LayerParameter& param)
+      : LossLayer<Dtype>(param) {}
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline const char* type() const { return "HungarianLoss"; }
+  virtual inline int ExactNumBottomBlobs() const { return 3; }
+  virtual inline int ExactNumTopBlobs() const { return 2; }
+  /**
+   * Unlike most loss layers, in the HungarianLossLayer we can backpropagate
+   * to both inputs -- override to return true and always allow force_backward.
+   */
+  //virtual inline bool AllowForceBackward(const int bottom_index) const {
+    //return true;
+  //}
+
+ protected:
+  /// @copydoc HungarianLossLayer
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+
+  vector<vector<long> > assignments_;
+  vector<int> num_gt_;
+  float match_ratio_;
+};
+#endif
+
 /**
  * @brief A generalization of MultinomialLogisticLossLayer that takes an
  *        "information gain" (infogain) matrix specifying the "value" of all label

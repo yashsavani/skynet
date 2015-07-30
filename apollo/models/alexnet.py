@@ -6,7 +6,7 @@ def weights_file():
     filename = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
     if not os.path.exists(filename):
         raise OSError('Please download the CaffeNet model first with \
-            ./scripts/download_model_binary.py models/bvlc_reference_caffenet')
+./scripts/download_model_binary.py models/bvlc_reference_caffenet')
     return filename
 
 def alexnet_layers():

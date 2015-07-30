@@ -175,6 +175,12 @@ LIBRARIES += glog gflags protobuf leveldb snappy \
 PYTHON_LIBRARIES := boost_python python2.7
 WARNINGS := -Wall -Wno-sign-compare
 
+USE_DLIB ?= 0
+ifeq ($(USE_DLIB), 1)
+	COMMON_FLAGS += -DUSE_DLIB
+	LIBRARIES += dlib
+endif
+
 ##############################
 # Set build directories
 ##############################
@@ -390,7 +396,7 @@ endif
 	py mat py$(PROJECT) mat$(PROJECT) proto runtest \
 	superclean supercleanlist supercleanfiles warn everything
 
-all: $(STATIC_NAME) $(DYNAMIC_NAME) tools examples
+all: $(STATIC_NAME) $(DYNAMIC_NAME) tools examples apollo
 
 everything: $(EVERYTHING_TARGETS)
 
@@ -630,6 +636,6 @@ $(DISTRIBUTE_DIR): all py | $(DISTRIBUTE_SUBDIRS)
 
 -include $(DEPS)
 
-apollo: all pycaffe
+apollo: pycaffe
 	makecython++ apollo/_apollo.pyx '' "$(CXXFLAGS) $(PYTHON_LDFLAGS) -lcaffe"
 	rm apollo/_apollo.h

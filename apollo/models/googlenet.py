@@ -6,7 +6,7 @@ def weights_file():
     filename = 'models/bvlc_googlenet/bvlc_googlenet.caffemodel'
     if not os.path.exists(filename):
         raise OSError('Please download the GoogLeNet model first with \
-            ./scripts/download_model_binary.py models/bvlc_googlenet')
+./scripts/download_model_binary.py models/bvlc_googlenet')
     return filename
 
 def googlenet_layers():
