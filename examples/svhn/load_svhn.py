@@ -15,17 +15,12 @@ np.random.seed(0)
 
 apollo_root = os.environ['APOLLO_ROOT']
 
-#IMG_HEIGHT = 120.
-#IMG_WIDTH = 192.
+# image dimensions
 IMG_HEIGHT = 60.
 IMG_WIDTH = 96.
-SUB_IMG_HEIGHT = IMG_HEIGHT * 1.
-SUB_IMG_WIDTH = IMG_WIDTH * 1.
-#TOP_HEIGHT = 15
-#TOP_WIDTH = 24
+# conv net spatial map dimensions
 TOP_HEIGHT = 30
 TOP_WIDTH = 48
-
 
 class Datum:
     def __init__(self, image, box_list, name = "datum", normalized=False):
@@ -134,8 +129,8 @@ class Datum:
 
         # put image on white canvas with proper aspect ratio
         (h, w) = self.image.shape
-        h_mul = SUB_IMG_HEIGHT / h
-        w_mul = SUB_IMG_WIDTH / w
+        h_mul = IMG_HEIGHT / h
+        w_mul = IMG_WIDTH / w
         mul = min(h_mul, w_mul)
 
         # resize image and bounding boxes
@@ -196,23 +191,18 @@ class Batch:
     def image_array(self):
         return np.array(self.image_list)
 
-def get_datum_iterator(data_type = "train", is_random = True):
+def get_datum_iterator(data_type = "extra", is_random = False):
     """
     Args:
-        data_type (str): specifies training or testing data ("train" or "test")
+        data_type (str): specifies type of data ("train" or "test")
         is_random (bool): if True randomly select each datum 
     Returns:
         Iter(Datum): iterator over datum instances.
     """
     data_source = '%s/data/svhn/' % apollo_root
-    #TODO
-    data_type = "test"
-    #is_random = False
-    #is_random = True
-    is_random = False
 
+    # combine training and extra training data
     if data_type == "train":
-        # combine training and extra training data
         digit_struct_path = os.path.join(data_source, "train.json")
         with open(digit_struct_path, 'r') as f:
             digit_struct = json.load(f)
@@ -222,8 +212,13 @@ def get_datum_iterator(data_type = "train", is_random = True):
             digit_struct += json.load(f)
 
     elif data_type == "test":
+        digit_struct_path = os.path.join(data_source, "test.json")
+        with open(digit_struct_path, 'r') as f:
+            digit_struct = json.load(f)
+
+    # easier than training set
+    elif data_type == "extra":
         digit_struct_path = os.path.join(data_source, "extra.json")
-        #digit_struct_path = os.path.join(data_source, "test.json")
         with open(digit_struct_path, 'r') as f:
             digit_struct = json.load(f)
 
@@ -249,7 +244,7 @@ def get_datum_iterator(data_type = "train", is_random = True):
         datum.is_normalized()
         yield datum
 
-def get_batch_iterator(batch_size, image_mean = None, data_type = "train", is_random = True):
+def get_batch_iterator(batch_size, image_mean = None, data_type = "extra", is_random = False):
     """
     Args:
         batch_size (int) - number of datum 

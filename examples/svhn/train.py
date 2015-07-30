@@ -22,6 +22,10 @@ from util import show_rect_list
 # imports hyper global variable containing training hyperparameters
 from hyper import hyper 
 
+# --- Make output directory ---
+if not os.path.exists("test"):
+    os.mkdir("test")
+
 # --- Parse command line arguments ---
 parser = argparse.ArgumentParser()
 parser.add_argument('--gpu', default=0, type=int)
@@ -39,8 +43,8 @@ apollo.Caffe.set_logging_verbosity(args.loglevel)
 
 # --- Initialize network ---
 net = apollo.Net()
-batch_iter = get_batch_iterator(hyper['batch_size'])
-test_batch_iter = get_batch_iterator(hyper['batch_size'], data_type = "test")
+batch_iter = get_batch_iterator(hyper['batch_size'], data_type = "extra")
+test_batch_iter = get_batch_iterator(hyper['batch_size'], data_type = "extra")
 
 batch = batch_iter.next()
 overfeat_net = OverfeatNet(net, batch)
@@ -70,30 +74,39 @@ for i in range(hyper['max_iter']):
     if i % hyper['test_interval'] == 0: 
         #for rect_list in overfeat_net.rect_list_iter():
         test_batch = test_batch_iter.next()
-        overfeat_net.train_batch_is(test_batch)
-        overfeat_net.net.reset_forward()
+        overfeat_net.test_batch_is(test_batch)
         for idx in xrange(overfeat_net.batch_size()):
+            # make predictions on characters
             rect_list = overfeat_net.rect_list(idx)
-            if len(rect_list) > 0:
-                logging.info("New detection.")
-                rect_list.sort(key = lambda x: x.xmin)
-                rect_str_list = [str(int(x.label) % 10) for x in rect_list]
-                label_str =  "".join(rect_str_list)
-            else:
-                label_str = ""
+            rect_list.sort(key = lambda x: x.xmin)
+            rect_str_list = [str(int(x.label) % 10) for x in rect_list]
+            label_str =  "".join(rect_str_list)
+            if label_str:
+                logging.info("New detections: " + label_str)
 
             datum = test_batch.datum_list[idx]
             image_new = show_rect_list(datum.image, rect_list)
 
-            # draw labels on image (sorted by xmin coordinate)
-            if label_str:
-                (h, w, _) = image_new.shape
-                xpos = w / 4
-                ypos = h / 4
-                cv2.putText(image_new, label_str, (xpos, ypos), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 255))
+            # ground truth
+            rect_str_list_truth = [str(int(x.label) % 10) for x in datum.rect_list]
+            label_str_truth =  "".join(rect_str_list_truth)
+            image_new_truth = show_rect_list(datum.image,  datum.rect_list)
 
-            path = "test/%d.png" %(idx)
+            # draw labels on images
+            (h, w, _) = image_new.shape
+            xpos = w / 4
+            ypos = h / 4
+            cv2.putText(image_new, label_str, (xpos, ypos), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255))
+            cv2.putText(image_new_truth, label_str_truth, (xpos, ypos), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255))
+
+            # prediction
+            path = "test/%d_pred.png" %(idx)
             cv2.imwrite(path, image_new)
+            logging.info("Saved to: " + path)
+
+            # ground truth
+            path = "test/%d_truth.png" %(idx)
+            cv2.imwrite(path, image_new_truth)
             logging.info("Saved to: " + path)
 
     if i % hyper['display_interval'] == 0:
@@ -103,7 +116,7 @@ for i in range(hyper['max_iter']):
         logging.info('Iteration %d bounding box loss: %s' % (i, np.mean(bbox_loss_hist[-hyper['display_interval']:])))
 
     if i % hyper['snapshot_interval'] == 0 and i > 0:
-        filename = args.name + "Param.h5"
+        filename = args.name + "_param.h5"
         logging.info('Saving net to: %s' % filename)
         net.save(filename)
 
