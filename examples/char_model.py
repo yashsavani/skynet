@@ -139,7 +139,9 @@ def eval_performance(net):
 
 def softmax_choice(data):
     try:
-        return np.random.choice(range(len(data.flatten())), p=data.flatten())
+        probs = data.flatten().astype(np.float64)
+        probs /= probs.sum()
+        return np.random.choice(range(len(probs)), p=probs)
     except:
         return np.argmax(data.flatten())
 
