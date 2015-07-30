@@ -4,50 +4,13 @@ import numpy as np
 import random
 import matplotlib
 import os
-import simplejson as json
-import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
+import json
+#import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
 apollo_root = os.environ['APOLLO_ROOT']
 
 import apollo
 import logging
 from apollo import layers
-
-import pickle
-import os
-
-def get_hyper():
-    hyper = {}
-    hyper['vocab_size'] = 256
-    hyper['batch_size'] = 32
-    hyper['init_range'] = 0.1
-    hyper['zero_symbol'] = hyper['vocab_size'] - 1
-    hyper['unknown_symbol'] = hyper['vocab_size'] - 2
-    hyper['test_interval'] = 100
-    hyper['test_iter'] = 20
-    hyper['base_lr'] = 0.2
-    hyper['weight_decay'] = 0
-    hyper['momentum'] = 0.0
-    hyper['clip_gradients'] = 20
-    hyper['display_interval'] = 100
-    hyper['max_iter'] = 10000
-    hyper['snapshot_prefix'] = '/tmp/char'
-    hyper['snapshot_interval'] = 1000
-    hyper['random_seed'] = 22
-    hyper['gamma'] = 0.8
-    hyper['graph_interval'] = 1000
-    hyper['stepsize'] = 2500
-    hyper['mem_cells'] = 1000
-    hyper['graph_interval'] = 1000
-    hyper['graph_prefix'] = ''
-    hyper['i_temperature'] = 1.5
-    return hyper
-
-hyper = get_hyper()
-
-apollo.Caffe.set_random_seed(hyper['random_seed'])
-apollo.Caffe.set_mode_gpu()
-apollo.Caffe.set_device(0)
-apollo.Caffe.set_logging_verbosity(3)
 
 def get_data():
     data_source = '%s/data/char_model/reddit_ml.txt' % apollo_root
@@ -64,14 +27,14 @@ def get_data():
         logging.info('epoch %s finished' % epoch)
         epoch += 1
 
-def get_data_batch(data_iter):
+def get_data_batch(data_iter, hyper):
     while True:
         batch = []
         for i in range(hyper['batch_size']):
             batch.append(next(data_iter))
         yield batch
 
-def pad_batch(sentence_batch):
+def pad_batch(sentence_batch, hyper):
     max_len = max(len(x) for x in sentence_batch)
     result = []
     for sentence in sentence_batch:
@@ -79,9 +42,9 @@ def pad_batch(sentence_batch):
         result.append(chars + [hyper['zero_symbol']] * (max_len - len(sentence)))
     return result
 
-def forward(net, sentence_batches):
+def forward(net, hyper, sentence_batches):
     batch = next(sentence_batches)
-    sentence_batch = np.array(pad_batch([x['body'] for x in batch]))
+    sentence_batch = np.array(pad_batch([x['body'] for x in batch], hyper))
     length = min(sentence_batch.shape[1], 100)
     assert length > 0
 
@@ -130,22 +93,12 @@ def forward(net, sentence_batches):
 
     return np.mean(loss)
 
-def eval_performance(net):
-    eval_net = apollo.Net()
-    eval_forward(eval_net)
-    eval_net.copy_params_from(net)
-    output_words = eval_forward(eval_net)
-    print ''.join([chr(x) for x in output_words])
-
 def softmax_choice(data):
-    try:
-        probs = data.flatten().astype(np.float64)
-        probs /= probs.sum()
-        return np.random.choice(range(len(probs)), p=probs)
-    except:
-        return np.argmax(data.flatten())
+    probs = data.flatten().astype(np.float64)
+    probs /= probs.sum()
+    return np.random.choice(range(len(probs)), p=probs)
 
-def eval_forward(net):
+def eval_forward(net, hyper):
     output_words = []
     filler = layers.Filler(type='uniform', max=hyper['init_range'],
         min=(-hyper['init_range']))
@@ -190,37 +143,44 @@ def eval_forward(net):
         net.tops['lstm_hidden_prev'].data_tensor.copy_from(net.tops['lstm_hidden_next'].data_tensor)
         net.tops['lstm_mem_prev'].data_tensor.copy_from(net.tops['lstm_mem_next'].data_tensor)
         net.reset_forward()
-    return output_words
+    print ''.join([chr(x) for x in output_words])
+    return 0.
 
-net = apollo.Net()
+def main():
+    hyper = apollo.default_hyper(
+        max_iter=10000,
+        snapshot_prefix='/tmp/char',
+        snapshot_interval=1000,
+        random_seed=22,
+        gamma=0.8,
+        stepsize=2500,
+        graph_interval=1000,
+        graph_prefix='')
+    hyper['mem_cells'] = 250
+    hyper['vocab_size'] = 256
+    hyper['batch_size'] = 32
+    hyper['init_range'] = 0.1
+    hyper['zero_symbol'] = hyper['vocab_size'] - 1
+    hyper['unknown_symbol'] = hyper['vocab_size'] - 2
+    hyper['test_interval'] = 100
+    hyper['test_iter'] = 1
+    hyper['base_lr'] = 0.2
+    hyper['weight_decay'] = 0
+    hyper['momentum'] = 0.0
+    hyper['clip_gradients'] = 100
+    hyper['display_interval'] = 100
+    hyper['i_temperature'] = 1.5
 
-sentences = get_data()
-sentence_batches = get_data_batch(sentences)
+    sentences = get_data()
+    sentence_batches = get_data_batch(sentences, hyper)
 
-forward(net, sentence_batches)
-net.reset_forward()
-train_loss_hist = []
+    apollo.update_hyper(hyper, apollo.default_parser().parse_args())
+    apollo.train(hyper, forward=(
+        lambda net, hyper: forward(net, hyper, sentence_batches)),
+        test_forward=eval_forward)
 
-for i in range(hyper['max_iter']):
-    train_loss_hist.append(forward(net, sentence_batches))
-    net.backward()
-    lr = (hyper['base_lr'] * (hyper['gamma'])**(i // hyper['stepsize']))
-    net.update(lr=lr, momentum=hyper['momentum'],
-        clip_gradients=hyper['clip_gradients'], weight_decay=hyper['weight_decay'])
-    if i % hyper['display_interval'] == 0:
-        logging.info('Iteration %d: %s' % (i, np.mean(train_loss_hist[-hyper['display_interval']:])))
-    if i % hyper['test_interval'] == 0:
-        eval_performance(net)
-    if i % hyper['snapshot_interval'] == 0 and i > 0:
-        filename = '%s_%d.h5' % (hyper['snapshot_prefix'], i)
-        logging.info('Saving net to: %s' % filename)
-        net.save(filename)
-    if i % hyper['graph_interval'] == 0 and i > 0:
-        sub = 100
-        plt.plot(np.convolve(train_loss_hist, np.ones(sub)/sub)[sub:-sub])
-        filename = '%strain_loss.jpg' % hyper['graph_prefix']
-        logging.info('Saving figure to: %s' % filename)
-        plt.savefig(filename)
+if __name__ == '__main__':
+    main()
 
 '''
 Sample output:

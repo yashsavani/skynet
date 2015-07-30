@@ -53,7 +53,7 @@ def train(hyper, forward, test_forward=None):
     apollo.init_flags(hyper)
 
     if hyper['gpu'] is None:
-        logging.info('Using cpu device')
+        logging.info('Using cpu device (pass --gpu X to train on the gpu)')
     else:
         logging.info('Using gpu device %d' % hyper['gpu'])
     net = apollo.Net()
