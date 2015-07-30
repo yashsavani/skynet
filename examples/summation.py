@@ -7,7 +7,30 @@ import argparse
 import apollo
 from apollo import layers
 
-def forward(net, hyper):
+def get_hyper():
+    hyper = {}
+    hyper['batch_size'] = 32
+    hyper['init_range'] = 0.1
+    hyper['base_lr'] = 0.03
+    hyper['weight_decay'] = 0
+    hyper['momentum'] = 0.9
+    hyper['clip_gradients'] = 0.1
+    hyper['display_interval'] = 100
+    hyper['max_iter'] = 5001
+    hyper['snapshot_prefix'] = '/tmp/summation'
+    hyper['snapshot_interval'] = 1000
+    hyper['random_seed'] = 22
+    hyper['gamma'] = 0.5
+    hyper['stepsize'] = 1000
+    hyper['solver_mode'] = 'gpu'
+    hyper['mem_cells'] = 1000
+    hyper['graph_interval'] = 1000
+    hyper['graph_prefix'] = ''
+    return hyper
+
+hyper = get_hyper()
+
+def forward(net):
     length = random.randrange(5, 15)
 
     # initialize all weights in [-0.1, 0.1]
@@ -56,6 +79,28 @@ def forward(net, hyper):
         bottoms=['ip', 'label']))
     return loss
 
+def train():
+    net = apollo.Net()
+    train_loss_hist = []
+
+    for i in range(hyper['max_iter']):
+        train_loss_hist.append(forward(net))
+        net.backward()
+        lr = (hyper['base_lr'] * (hyper['gamma'])**(i // hyper['stepsize']))
+        net.update(lr=lr, momentum=hyper['momentum'],
+            clip_gradients=hyper['clip_gradients'], weight_decay=hyper['weight_decay'])
+        if i % hyper['display_interval'] == 0:
+            logging.info('Iteration %d: %s' % 
+                (i, np.mean(train_loss_hist[-hyper['display_interval']:])))
+        if (i % hyper['snapshot_interval'] == 0 and i > 0) or i == hyper['max_iter'] - 1:
+            filename = '%s_%d.h5' % (hyper['snapshot_prefix'], i)
+            logging.info('Saving net to: %s' % filename)
+            net.save(filename)
+        if i % hyper['graph_interval'] == 0 and i > 0:
+            sub = 100
+            plt.plot(np.convolve(train_loss_hist, np.ones(sub)/sub)[sub:-sub])
+            plt.savefig('%strain_loss.jpg' % hyper['graph_prefix'])
+
 def evaluate_forward(net):
     length = 20
     net.forward_layer(layers.NumpyData(name='prev_hidden',
@@ -94,23 +139,17 @@ def eval():
     print evaluate_forward(eval_net)
 
 def main():
-    hyper = {}
-    hyper['momentum'] = 0.9
-    hyper['clip_gradients'] = 0.1
-    hyper['display_interval'] = 100
-    hyper['max_iter'] = 5001
-    hyper['snapshot_interval'] = 1000
-    hyper['random_seed'] = 7
-    hyper['gamma'] = 0.5
-    hyper['stepsize'] = 1000
-    hyper['graph_interval'] = 1000
-    hyper['base_lr'] = 0.03
-    hyper['batch_size'] = 32
-    hyper['init_range'] = 0.1
-    hyper['mem_cells'] = 1000
-    args = apollo.default_parser().parse_args()
-    hyper.update({k:v for k, v in vars(args).iteritems() if v is not None})
-    apollo.default_train(hyper, forward=forward)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--gpu', default=0, type=int)
+    parser.add_argument('--loglevel', default=3, type=int)
+    args = parser.parse_args()
+    random.seed(0)
+    apollo.Caffe.set_random_seed(hyper['random_seed'])
+    apollo.Caffe.set_mode_gpu()
+    apollo.Caffe.set_device(args.gpu)
+    apollo.Caffe.set_logging_verbosity(args.loglevel)
+
+    train()
     eval()
 
 if __name__ == '__main__':
