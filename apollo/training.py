@@ -79,7 +79,7 @@ def train(hyper, forward, test_forward=None):
             logging.info('Saving net to: %s' % filename)
             net.save(filename)
         if i % hyper['graph_interval'] == 0 and i > hyper['start_iter']:
-            hyper.get('sub', 100)
+            sub = hyper.get('sub', 100)
             plt.plot(np.convolve(train_loss_hist, np.ones(sub)/sub)[sub:-sub])
             filename = '%s/train_loss.jpg' % hyper['graph_prefix']
             logging.info('Saving figure to: %s' % filename)
