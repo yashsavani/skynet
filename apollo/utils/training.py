@@ -40,9 +40,7 @@ def default_train(hyper, forward, test_forward=None):
     d.update(hyper)
     hyper = d
     validate_hyper(hyper)
-    random.seed(hyper['random_seed'])
-    np.random.seed(hyper['random_seed'])
-    apollo.Caffe.set_random_seed(hyper['random_seed'])
+    apollo.set_random_seed(hyper['random_seed'])
     if hyper['gpu'] is not None:
         apollo.Caffe.set_mode_gpu()
         apollo.Caffe.set_device(hyper['gpu'])

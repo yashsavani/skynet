@@ -5,7 +5,7 @@ import numpy as np
 import logging
 import argparse
 
-import caffe_pb2
+from apollo import caffe_pb2
 from google.protobuf.text_format import Merge
 from apollo import Net
 import layers
