@@ -78,7 +78,7 @@ def reduced_rect_list(rect_list, max_len = 5):
         detection_array[i][4] = rect.prob
         detection_array[i][5] = rect.label
 
-    detection_array_new = nms_detections(detection_array, 0.3)
+    detection_array_new = nms_detections(detection_array, 0.2)
     rect_list_new = []
     for row in detection_array_new:
         rect_new = Rect(row[0], row[1], row[2], row[3], prob = row[4], label = row[5])

@@ -138,8 +138,6 @@ class OverfeatNet:
         """
         #bbox_label_pred = self.net.tops['bbox_label'].data[ind]
         #binary_pred = self.net.tops['binary_label'].data[ind]
-        #for i in range(10): print binary_pred[0][i]
-
         bottom_height = self.image_height
         bottom_width = self.image_width
         bbox_label_pred = self.net.tops['bbox_pred'].data[ind]
@@ -159,7 +157,7 @@ class OverfeatNet:
                 # we predict a symbol here
                 if binary_pred[0, y, x] < 0.5:
                     k = np.argmax(label_pred[:, y, x]) 
-                    #if label_pred[k, y, x] < 0.5: continue
+                    #if label_pred[k, y, x] < 0.2: continue
 
                     # apply offsets to get positions in original image
                     cx = cx_orig + bbox_label_pred[0, y, x]

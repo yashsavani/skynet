@@ -222,6 +222,7 @@ def get_datum_iterator(data_type = "extra", is_random = False):
         with open(digit_struct_path, 'r') as f:
             digit_struct = json.load(f)
 
+    random.shuffle(digit_struct)
     ind = 0 
     while True and ind < len(digit_struct):
         if is_random:
