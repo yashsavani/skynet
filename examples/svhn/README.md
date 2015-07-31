@@ -76,10 +76,10 @@ bbox_loss = net.forward_layer(layers.L1Loss(name='l1_loss', bottoms=['bbox_pred_
 ```
 
 Note that each point in the spatial map corresponds to a rectangular region in the original image.  To do bounding box regression, we estimate the cx and cy offsets (center x, y coordinates) of the bounding box around the object relative to the center pixel of the corresponding rectangular region.  We also estimate the width and the height of the bounding box.  The regression layer creates a spatial map `map` of depth 4 where:  
-    * map[0, y, x] - cx offset at (x,y) position
-    * map[1, y, x] - cy offset at (x,y) position
-    * map[2, y, x] - width of bounding box
-    * map[3, y, x] - height of bounding box
+  * `map[0, y, x]` - cx offset at (x,y) position
+  * `map[1, y, x]` - cy offset at (x,y) position
+  * `map[2, y, x]` - width of bounding box
+  * `map[3, y, x]` - height of bounding box
 
 We use a mask so that the we don't penalize the network for making bad predictions at locations in the image where no object is present.  
 
