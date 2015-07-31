@@ -188,6 +188,7 @@ cdef class Layer(object):
         
 cdef class Net:
     cdef ApolloNet* thisptr
+    python_layers = {}
     def __cinit__(self):
         self.thisptr = new ApolloNet()
     def __dealloc__(self):
@@ -208,9 +209,34 @@ cdef class Net:
             else:
                 raise ValueError("phase must be one of ['train', 'test']")
     def forward_layer(self, layer):
-        return self.thisptr.ForwardLayer(layer.p.SerializeToString(), layer.r.SerializeToString())
+        if layer.p.type == 'Py':
+            new_layer = (layer.p.name not in self.layers)
+            self.thisptr.ForwardLayer(layer.p.SerializeToString(), layer.r.SerializeToString())
+            tops = self.tops
+            bottom_vec = [tops[name] for name in layer.p.bottom]
+            top_vec = [tops[name] for name in layer.p.top]
+            if new_layer:
+                layer.blobs = self.layers[layer.p.name].blobs
+                self.python_layers[layer.p.name] = layer
+            cached_layer = self.python_layers[layer.p.name]
+            cached_layer.kwargs = layer.kwargs
+            cached_layer.p.bottom.CopyFrom(layer.p.bottom)
+            cached_layer.setup(bottom_vec, top_vec)
+            loss = cached_layer.forward(bottom_vec, top_vec)
+        else:
+            loss = self.thisptr.ForwardLayer(layer.p.SerializeToString(), layer.r.SerializeToString())
+        return loss
     def backward_layer(self, layer_name):
-        self.thisptr.BackwardLayer(layer_name)
+        if layer_name in self.python_layers:
+            cached_layer = self.python_layers[layer_name]
+            self.thisptr.BackwardLayer(layer_name)
+            tops = self.tops
+            bottom_vec = [tops[name] for name in cached_layer.p.bottom]
+            top_vec = [tops[name] for name in cached_layer.p.top]
+            cached_layer.backward(bottom_vec, top_vec)
+            self.thisptr.BackwardLayer(layer_name)
+        else:
+            self.thisptr.BackwardLayer(layer_name)
     def backward(self):
         for layer_name in self.active_layer_names()[::-1]:
             self.backward_layer(layer_name)

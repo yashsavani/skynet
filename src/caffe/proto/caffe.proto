@@ -343,6 +343,7 @@ message LayerParameter {
   optional PoolingParameter pooling_param = 121;
   optional PowerParameter power_param = 122;
   optional PReLUParameter prelu_param = 131;
+  optional PyParameter py_param = 203;
   optional PythonParameter python_param = 130;
   optional ReductionParameter reduction_param = 136;
   optional ReLUParameter relu_param = 123;
@@ -739,6 +740,16 @@ message PowerParameter {
   optional float power = 1 [default = 1.0];
   optional float scale = 2 [default = 1.0];
   optional float shift = 3 [default = 0.0];
+}
+
+message ParamShapeParameter {
+  repeated int32 dimension = 1;
+}
+
+// Apollo python parameter allowing param size specification
+message PyParameter {
+  repeated ParamShapeParameter param_shapes = 1;
+  repeated FillerParameter param_fillers = 2;
 }
 
 message PythonParameter {
