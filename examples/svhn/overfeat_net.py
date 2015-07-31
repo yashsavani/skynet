@@ -112,9 +112,7 @@ class OverfeatNet:
         net.forward_layer(layers.Softmax(name='label_softmax', bottoms=['label_conf_pred']))
 
         # bounding box prediction
-        net.forward_layer(layers.Convolution(name="bbox_pred", bottoms=["L7"], param_lr_mults=conv_lr_mults,
-            param_decay_mults=[0., 0.], kernel_size=1,
-            weight_filler=weight_filler, bias_filler=bias_filler, num_output=4))
+        net.forward_layer(layers.Convolution(name="bbox_pred", bottoms=["L7"], param_lr_mults=conv_lr_mults, param_decay_mults=[0., 0.], kernel_size=1, weight_filler=weight_filler, bias_filler=bias_filler, num_output=4))
         net.forward_layer(layers.Concat(name='bbox_mask', bottoms =  4 * ['binary_label']))
         net.forward_layer(layers.Eltwise(name='bbox_pred_masked', bottoms=['bbox_pred', 'bbox_mask'], operation='PROD'))
         net.forward_layer(layers.Eltwise(name='bbox_label_masked', bottoms=['bbox_label', 'bbox_mask'], operation='PROD'))
@@ -154,7 +152,7 @@ class OverfeatNet:
                 cx_orig = x_mul * (x + 0.5)
                 cy_orig = y_mul * (y + 0.5)
 
-                # we predict a symbol here
+                # we predict a symbol here if p(no label) < x
                 if binary_pred[0, y, x] < 0.5:
                     k = np.argmax(label_pred[:, y, x]) 
                     #if label_pred[k, y, x] < 0.2: continue
