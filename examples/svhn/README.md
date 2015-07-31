@@ -20,7 +20,6 @@ After a few thousand iterations the network starts making reasonable predictions
 ![](https://raw.githubusercontent.com/Russell91/apollo/master/examples/svhn/images/pred_0.png)
 ![](https://raw.githubusercontent.com/Russell91/apollo/master/examples/svhn/images/pred_1.png)
 ![](https://raw.githubusercontent.com/Russell91/apollo/master/examples/svhn/images/pred_2.png)
-![](https://raw.githubusercontent.com/Russell91/apollo/master/examples/svhn/images/pred_3.png)
 ![](https://raw.githubusercontent.com/Russell91/apollo/master/examples/svhn/images/pred_4.png)
 ![](https://raw.githubusercontent.com/Russell91/apollo/master/examples/svhn/images/pred_5.png)
 
