@@ -179,9 +179,8 @@ for i in range(1000):
             which instruct the C++ backend on what computations to run. After initializing the layer classes with the appropriate arguments 
             the protobuf LayerParameter can be found in the "class.p" attribute. You can even see or modify these LayerParameters directly:
             <!--The layer classes are defined in <a href="https://github.com/Russell91/apollo/blob/master/apollo/layers.py" target="_blank">apollo/layers.py</a>,-->
-            <pre><code class="nohighlight">print apollo.layers.Convolution(name='conv', kernel_size=1, bottoms=['data'], num_output=1).p                 
-
-name: "conv"
+<pre><code>print apollo.layers.Convolution(name='conv', kernel_size=1, bottoms=['data'], num_output=1).p</code></pre>
+<pre><code class="nohighlight">name: "conv"
 type: "Convolution"
 bottom: "data"
 top: "conv"
