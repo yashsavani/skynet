@@ -257,8 +257,7 @@ Next, we'll define the forward pass of the network in it's own function.
 </p>
 
 <div class="highlight">
-<pre><code class="language-python" data-lang="python">
-def forward(net):
+<pre><code class="language-python" data-lang="python">def forward(net):
     length = random.randrange(5, 15)
 
     # initialize all weights in [-0.1, 0.1]
@@ -319,8 +318,7 @@ Next we'll set up the training loop as before. But this time, we'll add a few be
 like network snapshots to HDF5 files, automatic plotting of the training loss, and better logging.
 </p>
 <div class="highlight">
-<pre><code class="language-python" data-lang="python">
-def train():
+<pre><code class="language-python" data-lang="python">def train():
     net = apollo.Net()
     train_loss_hist = []
 
@@ -348,8 +346,7 @@ we'll see if the network is able to <i>generalise</i> to sequences of longer len
 set the recurrent length to 20 numbers, all having value 0.5. Hopefully the network will output 10!
 </p>
 <div class="highlight">
-<pre><code class="language-python" data-lang="python">
-def evaluate_forward(net):
+<pre><code class="language-python" data-lang="python">def evaluate_forward(net):
     length = 20
     net.forward_layer(layers.NumpyData(name='prev_hidden',
         data=np.zeros((1, hyper['mem_cells'], 1, 1))))
@@ -394,8 +391,7 @@ def evaluate_forward(net):
     </p>
 
 <div class="highlight">
-<pre><code class="language-python" data-lang="python">
-    def eval():
+<pre><code class="language-python" data-lang="python">def eval():
     eval_net = apollo.Net()
     # evaluate the net once to set up structure before loading parameters
     evaluate_forward(eval_net)
@@ -459,7 +455,7 @@ if __name__ == '__main__':
             and the location of the network architecture file. The new file looks like this:
             </p>
 <div class="highlight">
-<pre><code class="language-python" data-lang="python"> # ./examples/mnist/lenet_solver.py
+<pre><code class="language-python" data-lang="python"># ./examples/mnist/lenet_solver.py
 def get_hyper():
     param = {}
     # The train/test net protocol buffer definition
