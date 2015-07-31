@@ -131,7 +131,7 @@ def eval(hyper):
     eval_net = apollo.Net()
     # evaluate the net once to set up structure before loading parameters
     evaluate_forward(eval_net)
-    eval_net.load('%s_%d.h5' % (hyper['snapshot_prefix'], hyper['max_iter'] - 1))
+    eval_net.load('%s/%d.h5' % (hyper['snapshot_prefix'], hyper['max_iter'] - 1))
     print evaluate_forward(eval_net)
 
 def main():

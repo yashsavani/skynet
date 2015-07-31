@@ -8,7 +8,7 @@ from caffe_pb2 import DataParameter
 import numpy as np
 
 class Layer(object):
-    def __init__(self, kwargs): #name, bottoms, tops, params=[]):
+    def __init__(self, kwargs):
         name = kwargs['name']
         bottoms = kwargs.get('bottoms', [])
         tops = kwargs.get('tops', [name])
@@ -38,6 +38,28 @@ class Layer(object):
                 self.p.phase = caffe_pb2.TEST
             else:
                 raise ValueError('Unknown phase')
+
+class PyLayer(Layer):
+    def __init__(self, kwargs):
+        super(PyLayer ,self).__init__(kwargs)
+        self.kwargs = kwargs
+        self.p.type = 'Py'
+        if 'param_shapes' in kwargs:
+            for shape in kwarg['param_shapes']:
+                param_shape = self.p.py_param.param_shapes.add()
+                for dimension in shape:
+                    param_shape.dimension.append(dimension)
+        if 'param_fillers' in kwargs:
+            assert len(kwargs['param_shapes']) == len(kwargs['param_filler'])
+            for filler in kwarg['param_fillers']:
+                filler_param = self.p.py_param.param_fillers.add()
+                filler_param.CopyFrom(filler.filler_param)
+    def setup(self, bottom_vec, top_vec):
+        pass
+    def forward(self, bottom_vec, top_vec):
+        pass
+    def backward(self, bottom_vec, top_vec):
+        pass
 
 class LossLayer(Layer):
     def __init__(self, kwargs):
@@ -334,3 +356,14 @@ class Wordvec(Layer):
         self.p.wordvec_param.vocab_size = vocab_size
         if 'weight_filler' in kwargs:
             self.p.wordvec_param.weight_filler.CopyFrom(kwargs['weight_filler'].filler_param)
+
+# =======================================================
+# Python Layers
+# =======================================================
+class SamplePythonLayer(PyLayer):
+    def __init__(self, **kwargs):
+        super(SamplePythonLayer, self).__init__(kwargs)
+    def forward(self, bottom, top):
+        print len(bottom)
+        print bottom[0].data
+        print 'hello'
