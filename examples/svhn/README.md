@@ -16,4 +16,8 @@ python train.py
 ```
 The loss is logged to the console.  Predictions are saved in the `test` subdirectory. 
 
+After a few thousand iterations the network starts making reasonable predictions:
+![](https://raw.githubusercontent.com/Russell91/apollo/master/examples/svhn/images/nice_pred_0.png)
+![](https://raw.githubusercontent.com/Russell91/apollo/master/examples/svhn/images/nice_pred_1.png)
+
 
