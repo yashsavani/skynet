@@ -11,7 +11,7 @@
 
     <!-- code highlighting -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.6/highlight.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.6/styles/default.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.6/styles/github.min.css">
     <script>hljs.initHighlightingOnLoad();</script>
 
     <link rel="shortcut icon" href="static/img/monogramDM.jpg" />
@@ -83,24 +83,24 @@
             <p>
             Clone the repository
             </p>
-            <pre><code>git clone http://github.com/Russell91/apollo.git && cd apollo</code></pre>
+            <pre><code class="nohighlight">git clone http://github.com/Russell91/apollo.git && cd apollo</code></pre>
 
             <p>
             Install the python dependencies
             </p>
-            <pre><code>for req in $(cat requirements.txt); do pip install $req; done</code></pre>
+            <pre><code class="nohighlight">for req in $(cat requirements.txt); do pip install $req; done</code></pre>
 
             <p>
             Set up your LD_LIBRARY_PATH and PYTHON_PATH
             </p>
-            <pre><code>export APOLLO_ROOT=/path/to/apollo
+            <pre><code class="nohighlight">export APOLLO_ROOT=/path/to/apollo
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$APOLLO_ROOT/build/lib # contains libcaffe.so
 export PYTHONPATH=$PYTHONPATH:$APOLLO_ROOT:$APOLLO_ROOT/python/caffe/proto</code></pre>
 
             <p>
             Finally, compile the library with
             </p>
-            <pre><code>cp Makefile.config.example Makefile.config
+            <pre><code class="nohighlight">cp Makefile.config.example Makefile.config
 make -j8
 make test -j8
 make runtest</code></pre>
@@ -383,14 +383,14 @@ if __name__ == '__main__':
     <p>
     and run the code with:
     </p>
-            <pre><code>python examples/summation.py --gpu 0
+            <pre><code class="nohighlight">python examples/summation.py --gpu 0
 </code></pre>
     <p>
     The output is: <br/>
-    [0.5915, 1.069, 1.548, 2.029, 2.513,<br/>
-    3.0016, 3.493, 3.989, 4.490, 4.996,<br/>
-    5.5045, 6.012, 6.518, 7.016, 7.503,<br/>
-    7.9752, 8.427, 8.855, 9.258, 9.632]<br/>
+    <pre><code class="nohighlight">[0.5915, 1.069, 1.548, 2.029, 2.513,
+3.0016, 3.493, 3.989, 4.490, 4.996,
+5.5045, 6.012, 6.518, 7.016, 7.503,
+7.9752, 8.427, 8.855, 9.258, 9.632]</pre></code>
     </p>
     <p>
     Recall that the network was trained on input sequencies ranging from 5 to 15 values long.
@@ -413,7 +413,7 @@ if __name__ == '__main__':
             <p>
             First, download the dataset and create the lmdb database
             </p>
-            <pre><code>cd $APOLLO_ROOT
+            <pre><code class="nohighlight">cd $APOLLO_ROOT
 ./data/mnist/get_mnist.sh
 ./examples/mnist/create_mnist.sh</code></pre>
             <p>
@@ -451,11 +451,11 @@ def get_hyper():
             <p>
             Note the reference to the original examples/mnist/lenet_train_test.prototxt architecture. We can now run this example with
             </p>
-            <pre><code>./apollo/legacy.py --solver ./examples/mnist/lenet_solver.py --gpu 0</pre></code>
+            <pre><code class="nohighlight">./apollo/legacy.py --solver ./examples/mnist/lenet_solver.py --gpu 0</pre></code>
             <p>
             If we additionally wanted to preload the pretrained Caffe Mnist weights after 10000 iterations, we could use
             </p>
-            <pre><code>./apollo/legacy.py --solver ./examples/mnist/lenet_solver.py --gpu 0 --weights ./examples/mnist/lenet_iter_10000.caffemodel</pre></code>
+            <pre><code class="nohighlight">./apollo/legacy.py --solver ./examples/mnist/lenet_solver.py --gpu 0 --weights ./examples/mnist/lenet_iter_10000.caffemodel</pre></code>
         </div>
         <div id="More_Examples" class="subgroup">
                     <div id="More_Examples" class="subgroup">
