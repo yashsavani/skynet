@@ -17,7 +17,10 @@ python train.py
 The loss is logged to the console.  Predictions are saved in the `test` subdirectory. 
 
 After a few thousand iterations the network starts making reasonable predictions:
-![](https://raw.githubusercontent.com/Russell91/apollo/master/examples/svhn/images/nice_pred_0.png)
-![](https://raw.githubusercontent.com/Russell91/apollo/master/examples/svhn/images/nice_pred_1.png)
+![](https://raw.githubusercontent.com/Russell91/apollo/master/examples/svhn/images/pred_0.png)
+![](https://raw.githubusercontent.com/Russell91/apollo/master/examples/svhn/images/pred_1.png)
+![](https://raw.githubusercontent.com/Russell91/apollo/master/examples/svhn/images/pred_2.png)
+
+The predicted symbols are written in red at the top and correspond to the bounding boxes as ordered from left to right.
 
 
