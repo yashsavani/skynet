@@ -38,6 +38,8 @@ class Layer(object):
                 self.p.phase = caffe_pb2.TEST
             else:
                 raise ValueError('Unknown phase')
+        self.deploy = self.kwargs.get('deploy', True)
+        self.train = self.kwargs.get('train', True)
 
 class PyLayer(Layer):
     def __init__(self, kwargs):
@@ -63,6 +65,7 @@ class PyLayer(Layer):
 
 class LossLayer(Layer):
     def __init__(self, kwargs):
+        kwargs['deploy'] = kwargs.get('deploy', False)
         super(LossLayer ,self).__init__(kwargs)
         tops = kwargs.get('tops', [kwargs['name']])
         loss_weight = kwargs.get('loss_weight', 1.)
