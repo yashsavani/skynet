@@ -83,5 +83,5 @@ Note that each point in the spatial map corresponds to a rectangular region in t
 
 We use a mask so that the we don't penalize the network for making bad predictions at locations in the image where no object is present.  
 
-The network will predict multiple bounding boxes for each object.  Use use non-max suppression to filter these boxes.  We note that this is an imperfect process.  A common issue is predicting multiple boxes for a single object instance. 
+The network will predict a large number of bounding boxes for each object, corresponding to all image regions where the binary character classifier fires.  We then use use non-maximum suppression to filter these boxes.  We note that this is an imperfect process.  A common issue is predicting multiple boxes for a single object instance. This is shown in the example images above.
 
