@@ -367,3 +367,13 @@ class SamplePythonLayer(PyLayer):
         print len(bottom)
         print bottom[0].data
         print 'hello'
+
+class Double(PyLayer):
+    def __init__(self, **kwargs):
+        super(Double, self).__init__(kwargs)
+    def forward(self, bottom, top):
+        top[0].reshape(bottom[0].shape)
+        top[0].data_tensor.copy_from(bottom[0].data_tensor)
+        top[0].data_tensor *= 2
+    def backward(self, top, bottom):
+        bottom[0].diff[:] = top[0].diff * 2

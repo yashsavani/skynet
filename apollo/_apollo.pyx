@@ -118,6 +118,11 @@ cdef class Blob(object):
         self.thisptr = other
     def count(self):
         return self.thisptr.get().count()
+    def reshape(self, pytuple):
+        cdef vector[int] shape
+        for x in pytuple:
+            shape.push_back(x)
+        self.thisptr.get().Reshape(shape)
     property shape:
         def __get__(self):
             return self.thisptr.get().shape()
@@ -220,8 +225,13 @@ cdef class Net:
                 self.python_layers[layer.p.name] = layer
             cached_layer = self.python_layers[layer.p.name]
             cached_layer.kwargs = layer.kwargs
-            cached_layer.p.bottom.CopyFrom(layer.p.bottom)
-            cached_layer.setup(bottom_vec, top_vec)
+            if new_layer:
+                cached_layer.setup(bottom_vec, top_vec)
+            else:
+                cached_layer.p.ClearField('bottom')
+                for bottom_name in layer.p.bottom:
+                    cached_layer.p.bottom.append(bottom_name)
+                cached_layer.r.CopyFrom(layer.r)
             loss = cached_layer.forward(bottom_vec, top_vec)
         else:
             loss = self.thisptr.ForwardLayer(layer.p.SerializeToString(), layer.r.SerializeToString())
@@ -233,7 +243,7 @@ cdef class Net:
             tops = self.tops
             bottom_vec = [tops[name] for name in cached_layer.p.bottom]
             top_vec = [tops[name] for name in cached_layer.p.top]
-            cached_layer.backward(bottom_vec, top_vec)
+            cached_layer.backward(top_vec, bottom_vec)
             self.thisptr.BackwardLayer(layer_name)
         else:
             self.thisptr.BackwardLayer(layer_name)
