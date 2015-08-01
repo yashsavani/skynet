@@ -11,12 +11,7 @@ pre code {
   white-space: pre;
 }
 pre {
-  padding: 6px 12px;
-  background: #FDFEFB;
-  border:1px solid #D7D8C8;
   overflow: auto;
-  white-space: pre-wrap;
-  margin-bottom: 13px;
 }
 /*.group {*/
     /*background: yellow;*/
