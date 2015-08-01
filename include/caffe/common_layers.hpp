@@ -356,6 +356,29 @@ class InnerProductLayer : public Layer<Dtype> {
   Blob<Dtype> bias_multiplier_;
 };
 
+// Python layer for Apollo to wrap
+// Sets up params, but provides no functionality when called from c++
+template <typename Dtype>
+class PyLayer : public Layer<Dtype> {
+ public:
+  explicit PyLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {}
+
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {}
+  virtual inline const char* type() const { return "Py"; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {}
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {}
+
+ private:
+};
+
 /**
  * @brief Normalizes the input to have 0-mean and/or unit (1) variance.
  *
