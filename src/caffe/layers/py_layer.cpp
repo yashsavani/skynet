@@ -1,8 +1,11 @@
+#ifdef WITH_PYTHON_LAYER
+
 #include <vector>
 #include "caffe/layer.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/python_layer.hpp"
 #include "caffe/vision_layers.hpp"
+
 
 namespace caffe {
 
@@ -34,3 +37,4 @@ INSTANTIATE_CLASS(PyLayer);
 REGISTER_LAYER_CLASS(Py);
 
 }  // namespace caffe
+#endif
