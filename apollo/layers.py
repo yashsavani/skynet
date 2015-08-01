@@ -38,8 +38,8 @@ class Layer(object):
                 self.p.phase = caffe_pb2.TEST
             else:
                 raise ValueError('Unknown phase')
-        self.deploy = self.kwargs.get('deploy', True)
-        self.train = self.kwargs.get('train', True)
+        self.deploy = kwargs.get('deploy', True)
+        self.train = kwargs.get('train', True)
 
 class PyLayer(Layer):
     def __init__(self, kwargs):
