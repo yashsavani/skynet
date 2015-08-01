@@ -51,7 +51,7 @@ void LstmLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   K_ = input_data_size_;
 
   this->blobs_.resize(4);
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 4; ++i) {
       this->blobs_[i].reset(new Blob<Dtype>(
           1, channels_, 1, input_data_size_));
   }
