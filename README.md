@@ -1,5 +1,5 @@
-<h1>Apollo</h1>
+<h1>Skynet</h1>
 
-Apollo is a deep learning codebase attempting to provide the functionality of Torch in python. It makes heavy use of code from <a href="http://github.com/bvlc/caffe">Caffe</a>. Please check out the <a href="http://apollo.deepmatter.io">project page</a> for installation instructions and usage.
+Skynet is a deep learning framework designed to be easy to use and extremely powerful. It makes heavy use of code from <a href="http://apollo.deepmatter.io">Apollo</a>.
 
 Apollo is in no way endorsed by the The Regents of the University of California or the Caffe Contributors
