@@ -58,7 +58,6 @@ void TransposeLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 STUB_GPU(TransposeLayer);
 #endif
 
-
 INSTANTIATE_CLASS(TransposeLayer);
 REGISTER_LAYER_CLASS(Transpose);
 
