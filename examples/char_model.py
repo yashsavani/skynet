@@ -6,7 +6,7 @@ import matplotlib
 import os
 import json
 #import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
-apollo_root = os.environ['APOLLO_ROOT']
+apollo_root = os.environ['SKYNET_ROOT']
 
 import apollo
 import logging

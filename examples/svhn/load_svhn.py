@@ -13,7 +13,7 @@ from util import Rect
 random.seed(0)
 np.random.seed(0)
 
-apollo_root = os.environ['APOLLO_ROOT']
+apollo_root = os.environ['SKYNET_ROOT']
 
 # image dimensions
 IMG_HEIGHT = 60.

@@ -5,7 +5,7 @@ import numpy as np
 import random
 import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
 import os
-apollo_root = os.environ['APOLLO_ROOT']
+apollo_root = os.environ['SKYNET_ROOT']
 
 import simplejson as json
 import apollo
@@ -205,7 +205,7 @@ for i in range(hyper['max_iter']):
 
 import pickle
 import os
-with open('%s/data/language_model/vocab.pkl' % os.environ['APOLLO_ROOT'], 'r') as f:
+with open('%s/data/language_model/vocab.pkl' % os.environ['SKYNET_ROOT'], 'r') as f:
     vocab = pickle.load(f)
 inv_vocab = {v: k for k, v in vocab.items()}
 

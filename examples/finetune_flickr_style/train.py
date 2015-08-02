@@ -13,7 +13,7 @@ import os
 import apollo
 from apollo import layers
 from apollo.models import alexnet
-apollo_root = os.environ['APOLLO_ROOT']
+apollo_root = os.environ['SKYNET_ROOT']
 
 def get_hyper():
     hyper = {}
